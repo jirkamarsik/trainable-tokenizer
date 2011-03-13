@@ -1,0 +1,45 @@
+trtok <TRAIN|TOKENIZE|EVALUATE> <scheme-path> [options...] [files...]
+Options:
+	-c, --encoding <encoding-name>:
+		Specifies the input and output encoding of the tokenizer.
+		UTF-8 is used if none is specified.
+	-p, --preserve-paragraphs:
+		Replaces paragraph breaks with a blank line.
+	-d, --detokenize:
+		Doesn't apply word splitting and joining decisions. The words
+		found in the input are preserved, whitespace is condensed
+		into single spaces or newlines in case of sentence break.
+	-s, --preserve-segments:
+		Assumes sentence boundaries are already specified by newlines.
+	-x, --hide-xml:
+		Hides XML markup from the tokenizer and then reintroduces it
+		to the output.
+	-e, --expand-entities:
+		Treats entities as the characters they represent. The output
+		will preserve these characters as entities.
+	-l, --file-list <file-list>:
+		A list of input files to be processed. If mode is TRAIN
+		and this setting is omitted, the file train.fl in scheme-path
+		is used instead. For the EVALUATE mode, the file evaluate.fl
+		is used as default. If the paths are relative, they are
+		evaluated with respect to the location of the file list.
+		More than 1 file list can be specified.
+	-r, --filename-regexp <regexp/replacement>:
+		A regular expression/replacement string used to generate
+		a set of pairs of input/output files. Output files are written
+		to in TOKENIZE mode and are used as correct answers in TRAIN
+		and EVALUATE modes. If no such expression is given in TRAIN
+		and EVALUATE modes, the contents of files train.fnre and
+		evaluate.fnre in the directory scheme-path are used instead.
+		If the mode is TOKENIZE, the output of tokenization is printed
+		to the standard output.
+	-q, --print-questions
+		Prints the questions presented to the maximum entropy classifier.
+		In TOKENIZE mode, the classifier's answer is present as well;
+		in TRAIN mode, it is the answer induced from the data.
+		In EVALUATE mode, both the answer given by the classifier
+		and the correct answer are output.
+
+The tokenizer acts on the supplied files and the files described in the file
+lists. If the mode is TOKENIZE and no files have been given, the tokenizer
+processes the standard input.
