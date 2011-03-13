@@ -26,7 +26,7 @@ public:
 	}
 
 	virtual void reset(std::istream *in, char const *encoding, bool byte_order_reversion) {
-		lexer = quex::RoughLexer(in, encoding, false);
+		lexer = quex::RoughLexer(in, encoding, byte_order_reversion);
 		token_p = 0x0;
 	}
 
