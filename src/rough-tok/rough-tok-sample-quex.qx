@@ -1,0 +1,404 @@
+start = FIND_SPLITS_JOINS_BREAKS;
+
+define {
+  SENTENCE_ENDING_MARKER [.?!:;'"\n]
+  SENTENCE_BEGINNING_MARKER [|]
+  JOIN_HEAD_1 [:digit:]
+  JOIN_TAIL_1 [:digit:]
+  JOIN_HEAD_2 [:digit:]
+  JOIN_TAIL_2 ,\P{White_Space}*[:digit:]
+  SPLIT_HEAD_1 are|ca|could|did|does|do|had|has|is|must|need|should|was|were|wo|would
+  SPLIT_TAIL_1 n't
+  SPLIT_HEAD_2 [:digit:]
+  SPLIT_TAIL_2 [$]
+  SPLIT_HEAD_3 [:alnum:]
+  SPLIT_TAIL_3 [,.:?!]
+}
+
+token {
+  TOKEN_PIECE;
+  MAY_BREAK_SENTENCE;
+  MAY_SPLIT;
+  MAY_JOIN;
+  WHITESPACE;
+  LINE_BREAK;
+  PARAGRAPH_BREAK;
+}
+
+header {
+#define flush_accumulator() if (self.accumulator_size > 0)\
+			    {\
+			    	self_accumulator_flush(QUEX_TKN_TOKEN_PIECE);\
+				self.accumulator_size = 0;\
+			    }
+
+#define send_whitespace() if (self.ws_newlines == 0)\
+				self_send(QUEX_TKN_WHITESPACE);\
+			  else if (self.ws_newlines == 1)\
+				self_send(QUEX_TKN_LINE_BREAK);\
+			  else\
+				self_send(QUEX_TKN_PARAGRAPH_BREAK);\
+			  self.ws_newlines = -1;
+}
+
+body {
+int ws_newlines, accumulator_size;
+}
+
+init {
+  self.ws_newlines = -1;
+  self.accumulator_size = 0;
+}
+
+mode FIND_SPLITS_JOINS_BREAKS {
+  {SPLIT_HEAD_1}/{SPLIT_TAIL_1}/		{ flush_accumulator();
+						  self_send(QUEX_TKN_MAY_SPLIT);
+						  self.undo();
+						  self << FIND_JOINS_BREAKS; }
+  {SPLIT_HEAD_2}/{SPLIT_TAIL_2}/		{ flush_accumulator();
+						  self_send(QUEX_TKN_MAY_SPLIT);
+						  self.undo();
+						  self << FIND_JOINS_BREAKS; }
+  {SPLIT_HEAD_3}/{SPLIT_TAIL_3}/		{ flush_accumulator();
+						  self_send(QUEX_TKN_MAY_SPLIT);
+						  self.undo();
+						  self << FIND_JOINS_BREAKS; }
+  {JOIN_HEAD_1}/\P{White_Space}+{JOIN_TAIL_1}/	{ flush_accumulator();
+						  self_send(QUEX_TKN_MAY_JOIN);
+						  self.undo();
+						  self << FIND_SPLITS_BREAKS; }
+  {JOIN_HEAD_2}/\P{White_Space}+{JOIN_TAIL_2}/	{ flush_accumulator();
+						  self_send(QUEX_TKN_MAY_JOIN);
+						  self.undo();
+						  self << FIND_SPLITS_BREAKS; }
+  {SENTENCE_ENDING_MARKER}/.|\n/		{ flush_accumulator();
+						  self_send(QUEX_TKN_MAY_BREAK_SENTENCE);
+						  self.undo();
+						  self << FIND_SPLITS_JOINS; }
+  {SENTENCE_BEGINNING_MARKER}			{ flush_accumulator();
+						  self_send(QUEX_TKN_MAY_BREAK_SENTENCE);
+						  self.undo();
+						  self << FIND_SPLITS_JOINS; }
+  [:inverse(\P{White_Space}):]			{ if (self.ws_newlines != -1)
+  						  {
+  							send_whitespace();
+						  }
+						  self_accumulator_add(Lexeme, LexemeEnd);
+						  self.accumulator_size++;
+						  self << FIND_SPLITS_JOINS_BREAKS; }
+  \n						{ if (self.ws_newlines == -1)
+  						  {
+						  	flush_accumulator();
+  							self.ws_newlines = 1;
+						  }
+						  else
+						  	self.ws_newlines++;
+						  self << FIND_SPLITS_JOINS_BREAKS; }
+  \P{White_Space}					{ if (self.ws_newlines == -1)
+  						  {
+  							flush_accumulator();
+							self.ws_newlines = 0;
+						  }
+						  self << FIND_SPLITS_JOINS_BREAKS; }
+  <<EOF>>					{ flush_accumulator();
+  						  if (self.ws_newlines != -1)
+						  {
+							send_whitespace();
+						  }
+  				  		  self_send(QUEX_TKN_TERMINATION); }
+}
+
+mode FIND_SPLITS_JOINS {
+  {SPLIT_HEAD_1}/{SPLIT_TAIL_1}/		{ flush_accumulator();
+						  self_send(QUEX_TKN_MAY_SPLIT);
+						  self.undo();
+						  self << FIND_JOINS; }
+  {SPLIT_HEAD_2}/{SPLIT_TAIL_2}/		{ flush_accumulator();
+						  self_send(QUEX_TKN_MAY_SPLIT);
+						  self.undo();
+						  self << FIND_JOINS; }
+  {SPLIT_HEAD_3}/{SPLIT_TAIL_3}/		{ flush_accumulator();
+						  self_send(QUEX_TKN_MAY_SPLIT);
+						  self.undo();
+						  self << FIND_JOINS; }
+  {JOIN_HEAD_1}/\P{White_Space}+{JOIN_TAIL_1}/	{ flush_accumulator();
+						  self_send(QUEX_TKN_MAY_JOIN);
+						  self.undo();
+						  self << FIND_SPLITS; }
+  {JOIN_HEAD_2}/\P{White_Space}+{JOIN_TAIL_2}/	{ flush_accumulator();
+						  self_send(QUEX_TKN_MAY_JOIN);
+						  self.undo();
+						  self << FIND_SPLITS; }
+  [:inverse(\P{White_Space}):]			{ if (self.ws_newlines != -1)
+  						  {
+  							send_whitespace();
+						  }
+						  self_accumulator_add(Lexeme, LexemeEnd);
+						  self.accumulator_size++;
+						  self << FIND_SPLITS_JOINS_BREAKS; }
+  \n						{ if (self.ws_newlines == -1)
+  						  {
+						  	flush_accumulator();
+  							self.ws_newlines = 1;
+						  }
+						  else
+						  	self.ws_newlines++;
+						  self << FIND_SPLITS_JOINS_BREAKS; }
+  \P{White_Space}					{ if (self.ws_newlines == -1)
+  						  {
+  							flush_accumulator();
+							self.ws_newlines = 0;
+						  }
+						  self << FIND_SPLITS_JOINS_BREAKS; }
+  <<EOF>>					{ flush_accumulator();
+  						  if (self.ws_newlines != -1)
+  						  {
+  							send_whitespace();
+						  }
+  				  		  self_send(QUEX_TKN_TERMINATION); }
+}
+
+mode FIND_SPLITS_BREAKS {
+  {SPLIT_HEAD_1}/{SPLIT_TAIL_1}/		{ flush_accumulator();
+						  self_send(QUEX_TKN_MAY_SPLIT);
+						  self.undo();
+						  self << FIND_BREAKS; }
+  {SPLIT_HEAD_2}/{SPLIT_TAIL_2}/		{ flush_accumulator();
+						  self_send(QUEX_TKN_MAY_SPLIT);
+						  self.undo();
+						  self << FIND_BREAKS; }
+  {SPLIT_HEAD_3}/{SPLIT_TAIL_3}/		{ flush_accumulator();
+						  self_send(QUEX_TKN_MAY_SPLIT);
+						  self.undo();
+						  self << FIND_BREAKS; }
+  {SENTENCE_ENDING_MARKER}/.|\n/		{ flush_accumulator();
+						  self_send(QUEX_TKN_MAY_BREAK_SENTENCE);
+						  self_send(QUEX_TKN_MAY_BREAK_SENTENCE);
+						  self.undo();
+						  self << FIND_SPLITS; }
+  {SENTENCE_BEGINNING_MARKER}			{ flush_accumulator();
+						  self_send(QUEX_TKN_MAY_BREAK_SENTENCE);
+						  self.undo();
+						  self << FIND_SPLITS; }
+  [:inverse(\P{White_Space}):]			{ if (self.ws_newlines != -1)
+  						  {
+  							send_whitespace();
+						  }
+						  self_accumulator_add(Lexeme, LexemeEnd);
+						  self.accumulator_size++;
+						  self << FIND_SPLITS_JOINS_BREAKS; }
+  \n						{ if (self.ws_newlines == -1)
+  						  {
+						  	flush_accumulator();
+  							self.ws_newlines = 1;
+						  }
+						  else
+						  	self.ws_newlines++;
+						  self << FIND_SPLITS_JOINS_BREAKS; }
+  \P{White_Space}					{ if (self.ws_newlines == -1)
+  						  {
+  							flush_accumulator();
+							self.ws_newlines = 0;
+						  }
+						  self << FIND_SPLITS_JOINS_BREAKS; }
+  <<EOF>>					{ flush_accumulator();
+  						  if (self.ws_newlines != -1)
+						  {
+							send_whitespace();
+						  }
+  				  		  self_send(QUEX_TKN_TERMINATION); }
+}
+
+mode FIND_JOINS_BREAKS {
+  {JOIN_HEAD_1}/\P{White_Space}+{JOIN_TAIL_1}/	{ flush_accumulator();
+						  self_send(QUEX_TKN_MAY_JOIN);
+						  self.undo();
+						  self << FIND_BREAKS; }
+  {JOIN_HEAD_2}/\P{White_Space}+{JOIN_TAIL_2}/	{ flush_accumulator();
+						  self_send(QUEX_TKN_MAY_JOIN);
+						  self.undo();
+						  self << FIND_BREAKS; }
+  {SENTENCE_ENDING_MARKER}/.|\n/		{ flush_accumulator();
+						  self_send(QUEX_TKN_MAY_BREAK_SENTENCE);
+						  self.undo();
+						  self << FIND_JOINS; }
+  {SENTENCE_BEGINNING_MARKER}			{ flush_accumulator();
+						  self_send(QUEX_TKN_MAY_BREAK_SENTENCE);
+						  self.undo();
+						  self << FIND_JOINS; }
+  [:inverse(\P{White_Space}):]			{ if (self.ws_newlines != -1)
+  						  {
+  							send_whitespace();
+						  }
+						  self_accumulator_add(Lexeme, LexemeEnd);
+						  self.accumulator_size++;
+						  self << FIND_SPLITS_JOINS_BREAKS; }
+  \n						{ if (self.ws_newlines == -1)
+  						  {
+						  	flush_accumulator();
+  							self.ws_newlines = 1;
+						  }
+						  else
+						  	self.ws_newlines++;
+						  self << FIND_SPLITS_JOINS_BREAKS; }
+  \P{White_Space}					{ if (self.ws_newlines == -1)
+  						  {
+  							flush_accumulator();
+							self.ws_newlines = 0;
+						  }
+						  self << FIND_SPLITS_JOINS_BREAKS; }
+  <<EOF>>					{ flush_accumulator();
+  						  if (self.ws_newlines != -1)
+						  {
+							send_whitespace();
+						  }
+  				  		  self_send(QUEX_TKN_TERMINATION); }
+}
+
+mode FIND_SPLITS {
+  {SPLIT_HEAD_1}/{SPLIT_TAIL_1}/		{ flush_accumulator();
+						  self_send(QUEX_TKN_MAY_SPLIT);
+						  self.undo();
+						  self << READ_ON; }
+  {SPLIT_HEAD_2}/{SPLIT_TAIL_2}/		{ flush_accumulator();
+						  self_send(QUEX_TKN_MAY_SPLIT);
+						  self.undo();
+						  self << READ_ON; }
+  {SPLIT_HEAD_3}/{SPLIT_TAIL_3}/		{ flush_accumulator();
+						  self_send(QUEX_TKN_MAY_SPLIT);
+						  self.undo();
+						  self << READ_ON; }
+  [:inverse(\P{White_Space}):]			{ if (self.ws_newlines != -1)
+  						  {
+  							send_whitespace();
+						  }
+						  self_accumulator_add(Lexeme, LexemeEnd);
+						  self.accumulator_size++;
+						  self << FIND_SPLITS_JOINS_BREAKS; }
+  \n						{ if (self.ws_newlines == -1)
+  						  {
+						  	flush_accumulator();
+  							self.ws_newlines = 1;
+						  }
+						  else
+						  	self.ws_newlines++;
+						  self << FIND_SPLITS_JOINS_BREAKS; }
+  \P{White_Space}					{ if (self.ws_newlines == -1)
+  						  {
+  							flush_accumulator();
+							self.ws_newlines = 0;
+						  }
+						  self << FIND_SPLITS_JOINS_BREAKS; }
+  <<EOF>>					{ flush_accumulator();
+  						  if (self.ws_newlines != -1)
+  						  {
+  							send_whitespace();
+						  }
+  				  		  self_send(QUEX_TKN_TERMINATION); }
+}
+
+mode FIND_JOINS {
+  {JOIN_HEAD_1}/\P{White_Space}+{JOIN_TAIL_1}/	{ flush_accumulator();
+						  self_send(QUEX_TKN_MAY_JOIN);
+						  self.undo();
+						  self << READ_ON; }
+  {JOIN_HEAD_2}/\P{White_Space}+{JOIN_TAIL_2}/	{ flush_accumulator();
+						  self_send(QUEX_TKN_MAY_JOIN);
+						  self.undo();
+						  self << READ_ON; }
+  [:inverse(\P{White_Space}):]			{ if (self.ws_newlines != -1)
+  						  {
+  							send_whitespace();
+						  }
+						  self_accumulator_add(Lexeme, LexemeEnd);
+						  self.accumulator_size++;
+						  self << FIND_SPLITS_JOINS_BREAKS; }
+  \n						{ if (self.ws_newlines == -1)
+  						  {
+						  	flush_accumulator();
+  							self.ws_newlines = 1;
+						  }
+						  else
+						  	self.ws_newlines++;
+						  self << FIND_SPLITS_JOINS_BREAKS; }
+  \P{White_Space}					{ if (self.ws_newlines == -1)
+  						  {
+  							flush_accumulator();
+							self.ws_newlines = 0;
+						  }
+						  self << FIND_SPLITS_JOINS_BREAKS; }
+  <<EOF>>					{ flush_accumulator();
+  						  if (self.ws_newlines != -1)
+  						  {
+  							send_whitespace();
+						  }
+  				  		  self_send(QUEX_TKN_TERMINATION); }
+}
+
+mode FIND_BREAKS {
+  {SENTENCE_ENDING_MARKER}/.|\n/		{ flush_accumulator();
+						  self_send(QUEX_TKN_MAY_BREAK_SENTENCE);
+						  self.undo();
+						  self << READ_ON; }
+  {SENTENCE_BEGINNING_MARKER}			{ flush_accumulator();
+						  self_send(QUEX_TKN_MAY_BREAK_SENTENCE);
+						  self.undo();
+						  self << READ_ON; }
+  [:inverse(\P{White_Space}):]			{ if (self.ws_newlines != -1)
+  						  {
+  							send_whitespace();
+						  }
+						  self_accumulator_add(Lexeme, LexemeEnd);
+						  self.accumulator_size++;
+						  self << FIND_SPLITS_JOINS_BREAKS; }
+  \n						{ if (self.ws_newlines == -1)
+  						  {
+						  	flush_accumulator();
+  							self.ws_newlines = 1;
+						  }
+						  else
+						  	self.ws_newlines++;
+						  self << FIND_SPLITS_JOINS_BREAKS; }
+  \P{White_Space}					{ if (self.ws_newlines == -1)
+  						  {
+  							flush_accumulator();
+							self.ws_newlines = 0;
+						  }
+						  self << FIND_SPLITS_JOINS_BREAKS; }
+  <<EOF>>					{ flush_accumulator();
+  						  if (self.ws_newlines != -1)
+  						  {
+  							send_whitespace();
+						  }
+  				  		  self_send(QUEX_TKN_TERMINATION); }
+}
+
+mode READ_ON {
+  [:inverse(\P{White_Space}):]			{ if (self.ws_newlines != -1)
+  						  {
+  							send_whitespace();
+						  }
+						  self_accumulator_add(Lexeme, LexemeEnd);
+						  self.accumulator_size++;
+						  self << FIND_SPLITS_JOINS_BREAKS; }
+  \n						{ if (self.ws_newlines == -1)
+  						  {
+						  	flush_accumulator();
+  							self.ws_newlines = 1;
+						  }
+						  else
+						  	self.ws_newlines++;
+						  self << FIND_SPLITS_JOINS_BREAKS; }
+  \P{White_Space}					{ if (self.ws_newlines == -1)
+  						  {
+  							flush_accumulator();
+							self.ws_newlines = 0;
+						  }
+						  self << FIND_SPLITS_JOINS_BREAKS; }
+  <<EOF>>					{ flush_accumulator();
+  						  if (self.ws_newlines != -1)
+  						  {
+  							send_whitespace();
+						  }
+  				  		  self_send(QUEX_TKN_TERMINATION); }
+}
