@@ -7,7 +7,7 @@
 
 // Quex adds a value to all user-defined token types. We want to translate
 // Quex's type ids into our type ids which includes moving the range Quex
-// uses in to a zero-based one (by substracting the offset of token ids).
+// uses into a zero-based one (by substracting the offset of token ids).
 // This value will be set by CMake to the same value sent to Quex so it
 // won't be sabotaged by changes in the implementation of Quex.
 #define TOKEN_ID_OFFSET 10000

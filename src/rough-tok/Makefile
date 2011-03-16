@@ -30,7 +30,8 @@ RoughLexer.cpp: RoughTok.qx
 	quex -i                 RoughTok.qx	\
 	     --engine           RoughLexer	\
 	     -b 4				\
-	     --iconv
+	     --iconv				\
+	     --token-id-offset	10000
 
 # (*) HELPERS __________________________________________________________________
 clean:	
