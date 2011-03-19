@@ -1,0 +1,50 @@
+token {
+	TEXT;
+	ENTITY;
+}
+
+define {
+	ENTITY &[:alnum:]+;
+}
+
+header {
+#include "configuration.hpp"
+
+#define flush_accumulator()    	{\
+					self_accumulator_flush(QUEX_PREPROC_NOX_TEXT);\
+					self.accumulator_size = 0;\
+				}
+}
+
+body {
+	int accumulator_size, nonblanks_read;
+}
+
+init {
+	self.accumulator_size = 0;
+	self.nonblanks_read = 0;
+}
+
+mode PREPROCESS {
+	\P{White_Space}+				{ if (self.accumulator_size + LexemeL > ACCUMULATOR_CAPACITY)
+								flush_accumulator();
+							  self_accumulator_add(LexemeBegin, LexemeEnd);
+							  self.accumulator_size += LexemeL; }
+	[:difference(inverse(\P{White_Space}),[&]):]+	{ if (self.accumulator_size + LexemeL > ACCUMULATOR_CAPACITY)
+								flush_accumulator();
+							  self_accumulator_add(LexemeBegin, LexemeEnd);
+							  self.accumulator_size += LexemeL;
+							  self.nonblanks_read += LexemeL; }
+	[:inverse(\P{White_Space}):]			{ if (self.accumulator_size + LexemeL > ACCUMULATOR_CAPACITY)
+								flush_accumulator();
+							  self_accumulator_add(LexemeBegin, LexemeEnd);
+							  self.accumulator_size += LexemeL;
+							  self.nonblanks_read += LexemeL; }
+	{ENTITY}					{ if (self.accumulator_size > 0)
+								flush_accumulator();
+							  self_send1(QUEX_PREPROC_NOX_ENTITY, Lexeme);
+							  self.nonblanks_read += LexemeL; }
+	<<EOF>>						{ if (self.accumulator_size > 0)
+								flush_accumulator();
+							  self_send(QUEX_PREPROC_NOX_TERMINATION); }
+}
