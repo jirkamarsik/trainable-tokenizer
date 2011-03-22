@@ -2,8 +2,13 @@
 #include <string>
 #include <vector>
 #include <boost/program_options.hpp>
+#include <tbb/concurrent_queue.h>
+
+#include "text_cleaner.hpp"
+#include "cutout_t.hpp"
 
 using namespace std;
+using namespace trtok;
 namespace po = boost::program_options;
 
 int main(int argc, char const **argv) {
@@ -48,5 +53,16 @@ int main(int argc, char const **argv) {
 	{
 		cout << "Usage: trtok <prepare|train|tokenize|evaluate> SCHEME [OPTION]... [FILE]..." << endl;
 		cout << explicit_options;
+	}
+
+	tbb::concurrent_queue<cutout_t> cutout_queue;
+
+	TextCleaner<char> cleaner(&cout, "UTF-8", true, true, &cutout_queue);
+	cleaner.setup(&cin);
+	cleaner.do_work();
+
+	typedef tbb::concurrent_queue<cutout_t>::const_iterator iter;
+	for (iter i = cutout_queue.unsafe_begin(); i != cutout_queue.unsafe_end(); i++) {
+		cout << (i->kind == ENTITY ? "ENTITY" : "XML") << " " << i->position << " " << i->text << " " << i->text.length() << endl;
 	}
 }
