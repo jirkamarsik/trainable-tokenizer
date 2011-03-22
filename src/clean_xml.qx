@@ -25,10 +25,10 @@ define {
 header {
 #include "configuration.hpp"
 
-#define flush_accumulator()    	{\
-					self_accumulator_flush(QUEX_PREPROC_WITHX_TEXT);\
+#define flush_accumulator_withxml() {\
+					self_accumulator_flush(QUEX_PREPROC_WITHXML_TEXT);\
 					self.accumulator_size = 0;\
-				}
+				  }
 }
 
 body {
@@ -44,36 +44,36 @@ init {
 
 mode PREPROCESS {
 	\P{White_Space}+			{ if (self.accumulator_size + LexemeL > ACCUMULATOR_CAPACITY)
-							flush_accumulator();
+							flush_accumulator_withxml();
 						  self_accumulator_add(Lexeme, LexemeEnd);
 						  self.accumulator_size += LexemeL; }
 	[:inverse(\P{White_Space},[&<]):]+	{ if (self.accumulator_size + LexemeL > ACCUMULATOR_CAPACITY)
-							flush_accumulator();
+							flush_accumulator_withxml();
 						  self_accumulator_add(Lexeme, LexemeEnd);
 						  self.accumulator_size += LexemeL;
 						  self.nonblanks_read += LexemeL; }
 	[:inverse(\P{White_Space}):]		{ if (self.accumulator_size + LexemeL > ACCUMULATOR_CAPACITY)
-							flush_accumulator();
+							flush_accumulator_withxml();
 						  self_accumulator_add(Lexeme, LexemeEnd);
 						  self.accumulator_size += LexemeL;
 						  self.nonblanks_read += LexemeL; }
-	{ENTITY}|{CHARREF}			{ if (self.expand_entities) {
+	({ENTITY})|({CHARREF})			{ if (self.expand_entities) {
 							if (self.accumulator_size > 0)
-								flush_accumulator();
+								flush_accumulator_withxml();
 							self.token_p()->set_number(self.nonblanks_read);
-							self_send1(QUEX_PREPROC_WITHX_ENTITY, Lexeme);
+							self_send1(QUEX_PREPROC_WITHXML_ENTITY, Lexeme);
 							self.nonblanks_read++; }
 						  else {
 						  	if (self.accumulator_size + LexemeL > ACCUMULATOR_CAPACITY)
-								flush_accumulator();
+								flush_accumulator_withxml();
 							self_accumulator_add(Lexeme, LexemeEnd);
 							self.accumulator_size += LexemeL;
 							self.nonblanks_read += LexemeL; } }
 	{XML}					{ if (self.accumulator_size > 0)
-							flush_accumulator();
+							flush_accumulator_withxml();
 						  self.token_p()->set_number(self.nonblanks_read);
-						  self_send1(QUEX_PREPROC_WITHX_XML, Lexeme); }
+						  self_send1(QUEX_PREPROC_WITHXML_XML, Lexeme); }
 	<<EOF>>					{ if (self.accumulator_size > 0)
-							flush_accumulator();
-						  self_send(QUEX_PREPROC_WITHX_TERMINATION); }
+							flush_accumulator_withxml();
+						  self_send(QUEX_PREPROC_WITHXML_TERMINATION); }
 }

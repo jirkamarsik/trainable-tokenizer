@@ -1,6 +1,7 @@
 token {
 	TEXT;
 	ENTITY;
+	XML;
 }
 
 define {
@@ -14,8 +15,8 @@ define {
 header {
 #include "configuration.hpp"
 
-#define flush_accumulator()    	{\
-					self_accumulator_flush(QUEX_PREPROC_NOX_TEXT);\
+#define flush_accumulator_noxml() {\
+					self_accumulator_flush(QUEX_PREPROC_NOXML_TEXT);\
 					self.accumulator_size = 0;\
 				}
 }
@@ -31,25 +32,25 @@ init {
 
 mode PREPROCESS {
 	\P{White_Space}+			{ if (self.accumulator_size + LexemeL > ACCUMULATOR_CAPACITY)
-							flush_accumulator();
+							flush_accumulator_noxml();
 						  self_accumulator_add(Lexeme, LexemeEnd);
 						  self.accumulator_size += LexemeL; }
 	[:inverse(\P{White_Space},[&]):]+	{ if (self.accumulator_size + LexemeL > ACCUMULATOR_CAPACITY)
-							flush_accumulator();
+							flush_accumulator_noxml();
 						  self_accumulator_add(Lexeme, LexemeEnd);
 						  self.accumulator_size += LexemeL;
 						  self.nonblanks_read += LexemeL; }
 	[:inverse(\P{White_Space}):]		{ if (self.accumulator_size + LexemeL > ACCUMULATOR_CAPACITY)
-							flush_accumulator();
+							flush_accumulator_noxml();
 						  self_accumulator_add(Lexeme, LexemeEnd);
 						  self.accumulator_size += LexemeL;
 						  self.nonblanks_read += LexemeL; }
 	{ENTITY}|{CHARREF}			{ if (self.accumulator_size > 0)
-							flush_accumulator();
+							flush_accumulator_noxml();
 						  self.token_p()->set_number(self.nonblanks_read);
-						  self_send1(QUEX_PREPROC_NOX_ENTITY, Lexeme);
+						  self_send1(QUEX_PREPROC_NOXML_ENTITY, Lexeme);
 						  self.nonblanks_read++; }
 	<<EOF>>					{ if (self.accumulator_size > 0)
-							flush_accumulator();
-						  self_send(QUEX_PREPROC_NOX_TERMINATION); }
+							flush_accumulator_noxml();
+						  self_send(QUEX_PREPROC_NOXML_TERMINATION); }
 }
