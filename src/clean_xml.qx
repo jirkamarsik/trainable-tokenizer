@@ -39,7 +39,7 @@ body {
 init {
 	self.accumulator_size = 0;
 	self.nonblanks_read = 0;
-	self.expand_entities = false;
+	self.expand_entities = true;
 }
 
 mode PREPROCESS {
@@ -52,12 +52,12 @@ mode PREPROCESS {
 						  self_accumulator_add(Lexeme, LexemeEnd);
 						  self.accumulator_size += LexemeL;
 						  self.nonblanks_read += LexemeL; }
-	[:inverse(\P{White_Space}):]		{ if (self.accumulator_size + LexemeL > ACCUMULATOR_CAPACITY)
+	&|<					{ if (self.accumulator_size + LexemeL > ACCUMULATOR_CAPACITY)
 							flush_accumulator_withxml();
 						  self_accumulator_add(Lexeme, LexemeEnd);
 						  self.accumulator_size += LexemeL;
 						  self.nonblanks_read += LexemeL; }
-	({ENTITY})|({CHARREF})			{ if (self.expand_entities) {
+	{ENTITY}|{CHARREF}			{ if (self.expand_entities) {
 							if (self.accumulator_size > 0)
 								flush_accumulator_withxml();
 							self.token_p()->set_number(self.nonblanks_read);

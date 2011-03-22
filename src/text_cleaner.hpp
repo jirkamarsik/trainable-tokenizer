@@ -18,10 +18,10 @@ class TextCleaner
 {
 public:
 	TextCleaner(std::ostream *output_stream, char const *input_encoding,
-		    bool expand_entities, bool hide_xml,
+		    bool hide_xml, bool expand_entities,
 		    tbb::concurrent_queue<cutout_t> *cutout_queue_p = 0x0):
 		m_output_stream(output_stream), m_input_encoding(input_encoding),
-		m_expand_entities(expand_entities), m_hide_xml(hide_xml),
+		m_hide_xml(hide_xml), m_expand_entities(expand_entities),
 		m_cutout_queue_p(cutout_queue_p) {}
 
 	void setup(std::istream *input_stream)

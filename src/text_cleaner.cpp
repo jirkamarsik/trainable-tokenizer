@@ -12,6 +12,7 @@
  * in different namespaces, the code is repeated twice for both of them
  * through macros. */
 #define TEXTCLEANER(cleaner_namespace, cleaner_class, token_prefix) cleaner_namespace::cleaner_class lex(m_input_stream, m_input_encoding);\
+		lex.expand_entities = m_expand_entities;\
 		cleaner_namespace::Token *token_p = 0x0;\
 \
 		do {\
