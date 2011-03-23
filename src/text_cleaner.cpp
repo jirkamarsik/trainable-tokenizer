@@ -29,7 +29,7 @@
 					cutout.kind = ENTITY;\
 					cutout.position = token_p->number;\
 					cutout.text = unicode_to_utf8(token_p->get_text());\
-					if (m_cutout_queue_p != 0x0)\
+					if ((m_cutout_queue_p != 0x0) && !m_keep_entities_expanded)\
 						m_cutout_queue_p->push(cutout);\
 					*m_output_stream_p << expand_entity(unicode_to_utf8(token_p->get_text())); }\
 				else\

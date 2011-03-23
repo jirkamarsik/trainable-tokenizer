@@ -2,12 +2,18 @@
 #include <string>
 #include <vector>
 #include <boost/program_options.hpp>
+#include <tbb/concurrent_queue.h>
+
+#include "text_cleaner.hpp"
+#include "cutout_t.hpp"
 
 using namespace std;
+using namespace trtok;
 namespace po = boost::program_options;
 
 int main(int argc, char const **argv) {
 	string mode, scheme;
+	bool hide_xml, expand_entities, keep_entities_expanded;
 
 	po::options_description explicit_options;
 	explicit_options.add_options()
@@ -21,8 +27,9 @@ int main(int argc, char const **argv) {
 		("preserve-paragraphs,p", "Replaces paragraph breaks with a blank line.")
 		("detokenize,d", "Doesn't apply word splitting and joining decisions. The words found in the input are preserved, whitespace is condensed into single spaces or newlines in case of sentence break.")
 		("preserve-segments,s", "Assumes sentence boundaries are already specified by newlines.")
-		("hide-xml,x", "Hides XML markup from the tokenizer and then reintroduces it to the output.")
-		("expand-entities,e", "Treats entities as the characters they represent. The output will preserve these characters as entities.")
+		("hide-xml,x", po::bool_switch(&hide_xml), "Hides XML markup from the tokenizer and then reintroduces it to the output.")
+		("expand-entities,e", po::bool_switch(&expand_entities), "Treats entities as the characters they represent. The output will preserve these characters as entities.")
+		("keep-entities-expanded,k", po::bool_switch(&keep_entities_expanded), "Override the behavior of -e so expanded entities are kept expanded in the output instead of being replaced with the original entities.")
 		("print-questions,q", "Prints the questions presented to the maximum entropy classifier. In TOKENIZE mode, the classifier's answer is present as well; in TRAIN mode, it is the answer induced from the data. In EVALUATE mode, both the answer given by the classifier and the correct answer are output.")
 		;
 
@@ -48,5 +55,16 @@ int main(int argc, char const **argv) {
 	{
 		cout << "Usage: trtok <prepare|train|tokenize|evaluate> SCHEME [OPTION]... [FILE]..." << endl;
 		cout << explicit_options;
+	}
+
+	tbb::concurrent_queue<cutout_t> cutout_queue;
+
+	TextCleaner cleaner(&cout, "UTF-8", hide_xml, expand_entities, keep_entities_expanded, &cutout_queue);
+	cleaner.setup(&cin);
+	cleaner.do_work();
+
+	typedef tbb::concurrent_queue<cutout_t>::const_iterator iter;
+	for (iter i = cutout_queue.unsafe_begin(); i != cutout_queue.unsafe_end(); i++) {
+		cout << (i->kind == ENTITY ? "ENTITY" : "XML") << " " << i->position << " " << i->text << " " << i->text.length() << endl;
 	}
 }
