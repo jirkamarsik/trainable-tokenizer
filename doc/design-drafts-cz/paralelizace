@@ -1,0 +1,4 @@
+Jednotlive komponenty hodlam propojit do pipeliny, jejiz prvky pobezi
+simultanne, cimz bude mozne po par prectenych vetach jiz vypisovat
+tokenizovany vystup, coz by u nastroje, nad jejichz vystupem budou chtit
+urcite pracovat rychle dalsi aplikace, bylo vhodne.

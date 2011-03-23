@@ -1,0 +1,22 @@
+Ignorovani XML markupu a chovani se k entitam jako k jednotlivym znakum je
+nemaly pozadavek. Jejich osetrovani bude volitelne a pokud si jej bude uzivatel
+prat, bude pred hrubou tokenizaci na textu proveden preprocessing, ktery
+jen vysbira veskere XML elementy a zapamatuje si jejich pozici. Entity bude
+resit jejich nahrazenim za patricny Unicode znak.
+
+Tento preprocessing umozni uzivateli naprosto ignorovat XML markup a muze se
+spolehnout, ze jeho splitovaci a joinovaci pravidla budou fungovat vsude.
+XML by bylo mozno sledovat i az behem hrube tokenizace, ovsem nastaly by
+problemy se spolehlivosti detekce splitovacich a joinovacich pravidel
+v pripade, ze by XML znacky lezely uvnitr slov anebo by prefixy a suffixy
+pravidel presahovaly jednotliva slova. Entity by takto zvladnout behem
+hrube tokenizace bylo uz takrka nemozne a proto jsem se rozhodl vydelit tyto
+kroky zvlast a ucinit je volitelnymi.
+
+Zvolene reseni bude tak robustnejsi a elegantnejsi za cenu vykonu.
+Preprocessing a hrubou tokenizaci by ale melo byt mozne umistit do dvou dilu
+pipeliny a omezit tak zpozdeni jim zpusobene.
+
+XML znacky a entity, ktere prepreocessing z textu vydrbe, se preposlou
+vystupnimu post-back-endu, ktery je bude vkladat zpet na jejich misto.
+Volitelne bude mozne nechat entity vyexpandovane.

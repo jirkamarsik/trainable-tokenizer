@@ -1,0 +1,44 @@
+Hruba tokenizace bude resena skrz Quex. Bude vracet tokeny typu TOKEN_PIECE,
+MAY_JOIN, MAY_SPLIT, MAY_BREAK_SENTENCE a nejaky popis bilych znaku mezi
+TOKEN_PIECEy (v soucasne implementaci trojice PARAGRAPH_BREAK pro bily usek
+s dvema a vice newlinami, LINE_BREAK pro usek s jednou newlinou a WHITESPACE
+pro bily usek bez newline).
+
+TOKEN_PIECE budou kusy nebilych znaku neprerusene otazkami MAY_*.
+
+MAY_JOIN bude lezet v mezere mezi TOKEN_PIECEy takove, ze prefix i suffix
+v danem bode odpovida regexpum z nejakeho joinovaciho pravidla.
+
+MAY_SPLIT bude lezet mezi TOKEN_PIECEy v bode, kde prefix i suffix odpovidaji
+nejakemu splitovacimu pravidlu.
+
+MAY_BREAK_SENTENCE se bude vyskytovat za kazdym moznym znakem ze souboru
+s priponou end a pred kazdym znakem ze souboru s priponou begin.
+
+
+
+Takovyto zpusob hrube tokenizace je momentalne implementovan ve slozce
+quex_move. Tato posledni implementace (quex_move/RoughTok.qx), je velice robustni.
+Skenuje vstupni soubor znak po znaku a zarucene nalezne veskere podezrele
+body v textu, at uz jsou uprosted slov, nalezi mezi bile znaky anebo nejak
+sdili prefix ci suffix s mistem jineho podezreleho bodu. Tuto robustni metodu
+hodlam nasadit i do finalni aplikace, jelikoz ve srovnani s ostatnimi
+implementacemi dopadla velice dobre. Ukazala se byt 2,5krat pomalejsi nez
+"baseline" implementace, ktera zrave trhala vstup po kusech a mohla tak prijit
+o nektere instance podezrelych bodu. Stale je vsak 4krat rychlejsi nez
+mene robustni implementace spolehajici se na PCRE. Vsechny implementace
+vykazovaly linearni casovou slozitost.
+
+Jedinou otazkou v hrube tokenizaci tak uz jen zbyva to, jakym zpusobem
+se budou hrube lexery kompilovat a linkovat.
+  Asi nejhezci variantou se jevi kompilovat hrube lexery po zmene schemata
+do vlastniho DLLka a za behu je nacitat podle vybraneho schematu jako pluginy.
+Alternativou jsou ruzne zpusoby, pri kterych se prekompiluje cela aplikace
+a zmena v hrubem lexeru pro dane schema se do ni zabuduje. To ale dela problemy
+s tim, ze bude zapotrebi napsat nejakou funkci, ktera bude interfacovat rucne
+psany kod a generovany kod. Ta by mela v zavislosti na nejakem retezci vratit
+lexer spravneho typu. Aby takovahle vec byla vubec Cckova funkce, bylo by
+zapotrebi nejak stourat do vystupu Quexu a pripsat, ze vsechny lexery
+implementuji nejaky spolecny interface. Zatim se spis tedy priklanim k prvni
+variante, ktera nabizi rychlejsi update, vetsi modularitu a pravdepodobne
+spolehlivejsi implementaci.

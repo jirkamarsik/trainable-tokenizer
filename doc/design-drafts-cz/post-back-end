@@ -1,0 +1,12 @@
+Post-back-end (tak se to pak snad jmenovat nebude), bude mit na starost
+vypisovat tokeny podle vyresenych otazek na vystup. Prave v tuto chvili
+prijdou na radu optiony jako --preserve-paragraphs, --detokenize a
+--preserve-segments. Jelikoz mame v token streamu informace o newlinach
+a mezerach, muze post-back-end napr. ignorovat rozhodnuti o splitech
+a joinech a mezi slova vkladat mezery jen tam, kde puvodne byly. Podle
+pozadavku techto optionu byly stvoreny i pozadavky na hrubou tokenizaci
+a preprocessing textu, tudiz samotna implementace post-back-endu by uz
+mela byt hrackou.
+
+Pokud budou z textu vytrhovany XML a entity, bude to ukol post-back-endu
+je pomoci dat z preprocessingu vratit zpatky na jejich misto.

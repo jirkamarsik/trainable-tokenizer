@@ -1,0 +1,75 @@
+Back-end si bude udrzovat posuvne okenko o velikosti kontextu daneho v souboru
+features. Jelikoz uz se bude uzivateli hodit mit dobrou predstavu o tom, co je
+to hruby token (aby napr. vedel, jak siroky kontext co do poctu hrubych tokenu
+je pro nej lingvisticky zajimavy), tak otazky (MAY_*) uz netvori vlastni
+tokeny.
+
+Pro kazdy token v okenku si budu uchovavat nasledujici informace:
+	- zneni tokenu
+	- jestli jsem testoval token proti regexpovym vlastnostem (bud pro
+	  kazdou zvlast anebo najednou, to se jeste uvidi)
+	- jake ma token regexpove vlastnosti (ze zacatku
+	  asi za kazdou bool, pozdeji pripadne bitove pole)
+	- jestli jsem testoval token proti vyctovym vlastnostem (zase zalezi
+	  na tom, jestli budu testy provadet jednim dotazem na nejakou slozenou
+	  stukturu, anebo jestli budu mnoziny reprezentovat individualne)
+	- jake ma token vyctove vlastnosti (a la ty regexpove)
+	- kolik je bileho mista mezi timto a nasledujicim tokenem, 4 moznosti:
+		- zadne (pokud mezi tokeny nedojde ke SPLITu anebo predelu mezi
+		  vety, tak by se meli slepit zpet)
+		- jednoradkove (mezi tokeny jsou bile znaky, ale lezi na
+		  stejnem radku; pokud nedojde k JOINu, mezi tokeny by mela
+		  byt vlozena mezera)
+		- s newlinou (pokud je mezi tokeny jedna newlina; tento pripad
+		  nas zajima, kdybychom chteli pri vystupnim formatovani
+		  napriklad zanechat delbu na radky a jen segmentovat slova)
+		- s vice newlinami (tohle nas zajima, pokud chceme do vystupu
+	  	  vkladat prazdne radky za predely mezi odstavci)
+	- pritomnost otazek a pripadne jejich rozhodnoti lezicich mezi timto
+	  a nasledujicim tokenem (MAY_SPLIT, DO_SPLIT, DONT_SPLIT, MAY_JOIN,
+	  DO_JOIN, DONT_JOIN, MAY_BREAK_SENTENCE, DO_BREAK_SENTENCE,
+	  DONT_BREAK_SENTENCE)
+
+
+Jak vypada jedna iterace back-endu:
+
+Necht k je nejvzdalenejsi token v levem kontextu a l v pravem (ze souboru
+features). Kontextove okenko budeme mit v poli o delce k + l + 1. Na zacatku
+bude plne znacek pro zacatek textu, index i nastavim na libovolnou hodnotu
+z 0..k+l. Proces zpracovani jednoho tokenu bude vypadat nasledovne:
+
+1) Posunu index i na dalsi prvek (i := i + 1 mod velikost okenka w).
+   Z front-endu si vytahnu jeden token (jeho zneni, kolik je za nim bileho
+   mista a jake otazky, resp. vsechno az do dalsiho tokenu)
+   a ulozim jej do pozice (i + l) mod w.
+
+2) Pokud ma token na pozici i nejake otazky, sestavim podle souboru features
+   seznam rysu pro ME model a zeptam se na nejpravdepodobnejsi odpoved.
+   Prislusnost do vlastnosti kontroluju na pozadani a vysledek uschovavam
+   pro dalsi dotazy (na kolik to bude uzitecne ukazou metriky pri praci
+   se skutecnymi tokenizacnimi schematy v dalsi fazi prace). 
+   Otazky nahradim odpovedmi.
+
+3) Prvek na pozici (i - k) mod w poslu vystupnimu modulu (post-back-end), ktery
+   se postara o jeho spravne vypsani na vystup (bude rizen parametry jako
+   --detokenize, --preserve-paragraphs, apod.). Vydeleni vystupni casti znamena,
+   ze si nebudu muset v logicke casti pamatovat veci, jako jestli musim po
+   minulem tokenu jeste vlozit mezeru apod.
+   Uvidim, nakolik bude brzdicim faktorem rychlost zapisu do
+   souboru. V zavislosti na tom se muze mezi logickou a vystupni cast vlozit
+   take fronta producent/konzument.
+
+
+Stejny back-end bude moct fungovat i pri trenovani az na vyjimku, ze misto
+dotazovani budu rovnou posilat ME modelu otazku i s odpovedi. Odpovedi budu
+ziskavat z anotovanych dat jejich srovnavanim s proudem tokenu. Pokud pri
+alignmentu narazim na split, join anebo predel mezi vetami, ktery mi proud
+tokenu nenabizi, tak budu pokracovat, ale vyhodim varovani, ze by stalo za to
+rozsirit pravidla pro vkladani otazek.
+
+Co se tyce testovani tokenu vuci regexpovym vlastnostem, rad bych ozkousel
+knihovnu re2 (http://code.google.com/p/re2/), ktera by nemela mit problem
+i s vetsimi disjunkcemi a mohla by byt schopna efektivne rozsoudit vic
+vlastnosti najednou. Co se tyce testovani vyctovych vlastnosti, tak tam
+nejprve pouziji asi set z STL, pozdeji pak prejdu bud na trie nebo neco
+podobneho.

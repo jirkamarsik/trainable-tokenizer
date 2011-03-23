@@ -1,0 +1,140 @@
+Navrh struktury definic tokenizacnich schemat
+---------------------------------------------
+
+
+jmeno_schematu/
+	vlastnost_dana_vyctem.enump
+	vlastnost_dana_regexpem.rep
+	pravidla1.split
+	pravidla2.split
+	pravidla3.join
+	spolecne_ukoncovace.end
+	vlastni_ukoncovace.end
+	spolecne_zacatky.begin
+	features
+	maxent.params
+	train.fl
+	train.fnre
+	evaluate.fl
+	evaluate.fnre
+	jmeno_dcerinneho_schematu/
+		vlastnost_dana_regexpem.rep
+		uplne_nova_vlastnost.rep
+		pravidla2.split
+		vlastni_ukoncovace.end
+		features
+		train.fl
+		train.fnre
+		evaluate.fl
+		evaluate.fnre
+
+
+Vlastnosti dane vyctem:
+	V souborech s priponou enump (enumerated property) je seznam vsech
+slov majici definovanou vlastnost, kazde zneni na vlastnim radku. Cast jmena
+souboru pred priponou je omezena na identifikatorove znaky [a-zA-Z0-9_] a
+oznacuje jmeno vlastnosti.
+	Zustava otazkou, jestli by test na prislusnost mel byt case-sensitive
+a jestli by melo byt uzivatelovi mozno dat vybrat (treba udelat dva typy
+vyctovych vlastnosti, odlisene priponou).
+
+
+Vlastnosti dane regularnim vyrazem:
+	Obsah souboru s priponou rep (regular expression property) je
+interpretovan jako regularni vyraz. Tokeny, jejichz zneni matchuje tento
+regularni vyraz jsou oznaceny touto vlastnosti. Cast jmena souboru pred
+priponou opet slouzi jako identifikator vlastnosti.
+
+
+Soubory s pravidly maysplit:
+	Tyto soubory (pripona split) obsahuji na kazdem radku bilymi znaky
+oddelenou dvojici regularnich vyrazu, ktere popisuji prefix a suffix slova
+ze vstupniho textu, mezi ktere je pripustne vlozit otazku MAY_SPLIT.
+
+
+Soubory s pravidly mayjoin:
+	Format souboru je stejny jako u split, ale regularni vyrazy slouzi
+k popisu slova na vstupu a jeho naslednika oddeleneho bilymi znaky (a pripadne
+XML znackami), mezi nez je pripustne vlozit otazku MAY_JOIN (pripona join).
+
+
+Soubory se znaky, ktere mohou ukoncovat vety:
+	Soubory s priponou end sestavaji pouze ze znaku, ktere mohou oznacovat
+konce vet a je za ne tudiz vkladana otazka MAY_BREAK_SENTENCE.
+
+
+Soubory se znaky, ktere mohou uvozovat nove vety:
+	Soubory s priponou begin obsahuji znaky, pred ktere se ma vkladat
+otazka MAY_BREAK_SENTENCE.
+
+
+Soubor s popisem featur pro ME model:
+	V kazdem tokenizacnim schematu se povinne musi nachazet soubor
+features, ktery popisuje, jake featury se maji predat strojovemu uceni.
+
+Ukazka formatu:
+-3..+3: %Word, vlastnost_dana_regexpemA;
+-1: vlastnost_dana_vyctem, (vlastnost1 ^ vlastnost2), %length;
++1: vlastnost_dana_regexpemB;
+(-1:inicial ^ 0:%Word ^ +1:vypada_jako_prijmeni)
+
+Dalsi priklad:
+-8..8: %Word
+-3..3: *              (vsecny definovane vlastnosti)
+
+	Motivaci pro takovou uroven specifikace je vicero. Jednim z duvodu
+je fakt, ze nase implementace MaxEntu nepouziva zadnou metodu feature
+selection. Pro kazdou sledovanou dvojici (vlastnost, vysledek) se vytvori
+feature funkce a te se priradi vaha v exponencialnim modelu. Ocekavana hodnota
+teto feature funkce na trenovacich datech se musi shodovat s ocekavanou hodnotou
+v modelu. Timto vsak muze dochazet k overfittingu (metoda se tim vic priblizuje
+MLE). Omezenim mnoziny vlastnosti tak muzeme umoznit uzivateli provadet feature
+selection.
+	U nekterych systemu (napr. POS taggery) zalozenych na principu maximalni
+entropie se take osvedcilo pouzivani slozitejsich featur, ktere nezavisi jen
+na jedine vlastnosti jednoho slova z kontextu. S timto rozsirenim by pak bylo
+mozne trenovat penalty za deleni konkretnich bigramu do dvou ruznych vet apod. 
+(http://www.cs.berkeley.edu/~klein/papers/maxent-tutorial-slides.pdf, slajdy
+37 - 40, Feature Interaction)
+Toto vylepseni nas zase muze dostat k vetsimu overfittingu, ale bylo by
+zajimave skrz nej sledovat dopad ruznych featur na chybovost systemu. Take by
+se hodilo, aby s tim system uz pocital, kdyby se nekdo treba rozhodl do MaxEnt
+Toolkitu Incremental Feature Selection doimplementovat.
+	Skrz tento soubor se tak implicitne nastavi i sirka kontextoveho okenka.
+Je v uzivatelovi moci, pro ktere pozice se bude predavat systemu i cely token.
+K tomu bude mit k dispozici vlastnosti %Word (jeho mixed-case zneni) a %WORD,
+ci pripadne %word (jeho single-case zneni). Navic system Punkt demonstroval,
+ze delka slov je uzitecnym rysem pro detekci zkratek, a tak navic bude system
+nabizet vlastnost %length, ktera vyuzije toho, ze MaxEnt Toolkit podporuje
+rysy s realnymi hodnotami.
+	Mozna by nebylo od veci timto zpusobem chtit po uzivateli, aby oznacil,
+kde vsude ho zajimaji rozhodovaci body a odpovedi na ne a nechat ho skladat
+je spolu s ostatnimi vlastnostmi do slozenych featur (k otazkam se uz nechovam
+jako k individualnim tokenum, nybrz jako ke znackam na urcitych pozicich;
+uzivatel by tak s temito znackami pak mohl pracovat jako s jeho vlastnostmi).
+	Nejspis by nebylo na skodu pridat moznost urcit jinou sadu featur pro
+ruzne rozhodovaci problemy skrz soubory jako features.join, features.split
+a features.break.
+
+
+Soubor s parametry pro ME engine:
+	V souboru maxent.params se pak bude nachazet vyber trenovaci metody
+(L-BFGS nebo GIS), pocet iteraci a koeficient pro vyhlazovani.
+Priklad:
+method=lbfgs
+iterations=30
+smoothing=2.0
+
+
+Trenovaci data:
+	Pri trenovani a testovani klasifikatoru bude uzivatel explicitne
+urcovat sadu dat k trenovani a testovani. Bude vsak mozne pridat implicitni
+trenovaci a testovaci data skrz soubory train.fl, train.fnre, evaluate.fl
+a evaluate.fnre. V souborech .fl bude seznam relativnich cest k neanotovanym
+souborum a v souborech.fnre bude regularni vyraz/replacement retezec, pomoci
+ktereho se z cesty k neanotovanemu souboru dohleda cesta s anotovanym souborem.
+
+Dedicnost:
+	Dcerinna tokenizacni schemata zdedi veskere konfiguracni soubory svych
+predku. Maji vsak moznost vytvorit stejnojmenne soubory, ktere prepisi ty zdedene.
+Soubory s trenovacimi daty se nededi.
