@@ -38,6 +38,7 @@ public:
 
 private:
 	void prepare_entity_map();
+	bool expand_entity(std::string const &entity, std::string &expanded_str);
 
 	std::istream *m_input_stream_p;
 	std::ostream *m_output_stream_p;

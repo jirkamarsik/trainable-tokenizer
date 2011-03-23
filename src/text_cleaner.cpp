@@ -1,3 +1,4 @@
+#include <cstdlib>
 #include <string>
 #include <boost/unordered_map.hpp>
 
@@ -29,13 +30,23 @@
 					cutout.kind = ENTITY;\
 					cutout.position = token_p->number;\
 					cutout.text = unicode_to_utf8(token_p->get_text());\
-					if ((m_cutout_queue_p != 0x0) && !m_keep_entities_expanded)\
-						m_cutout_queue_p->push(cutout);\
-					*m_output_stream_p << expand_entity(unicode_to_utf8(token_p->get_text())); }\
-				else\
+					\
+					std::string entity = unicode_to_utf8(token_p->get_text());\
+					std::string expanded;\
+					bool good_expand = expand_entity(entity, expanded);\
+					if (good_expand) {\
+						if ((m_cutout_queue_p != 0x0) && !m_keep_entities_expanded) {\
+							m_cutout_queue_p->push(cutout);\
+							*m_output_stream_p << expanded;\
+						} else {\
+							*m_output_stream_p << expanded;\
+						}\
+					} else {\
+							*m_output_stream_p << entity;\
+					}\
+				} else\
 					*m_output_stream_p << unicode_to_utf8(token_p->get_text());\
-			}\
-			else if (token_p->type_id() == token_prefix##XML) {\
+			} else if (token_p->type_id() == token_prefix##XML) {\
 				cutout_t cutout;\
 				cutout.kind = XML;\
 				cutout.position = token_p->number;\
@@ -45,7 +56,6 @@
 			}\
 		} while (token_p->type_id() != token_prefix##TERMINATION)
 
-
 namespace trtok {
 
 inline std::string unicode_to_utf8(std::basic_string<uint32_t> const &str)
@@ -53,10 +63,32 @@ inline std::string unicode_to_utf8(std::basic_string<uint32_t> const &str)
 	return clean_entities::EntityCleaner_unicode_to_char(str);
 }
 
-//TODO: to be implemented
-std::string expand_entity(std::string const &entity)
+bool TextCleaner::expand_entity(std::string const &entity, std::string &expanded_str)
 {
-	return "X";
+	uint32_t expanded_char = 0;
+	bool success = false;
+
+	if (entity[1] == '#') {
+		char const *entity_p = entity.c_str();
+		char *conv_out_p;
+		if ((entity[2] == 'x') || (entity[2] == 'X'))
+			expanded_char = strtoul(entity_p + 3, &conv_out_p, 16);
+		else
+			expanded_char = strtoul(entity_p + 2, &conv_out_p, 10);
+		success = (conv_out_p - entity_p == entity.length() - 1)
+				&& (expanded_char > 1);
+				//0x0 and 0x1 are characters we do not want in the Quex stream
+	} else {
+		typedef boost::unordered_map<std::string, uint32_t>::const_iterator iter;
+		iter lookup = m_entity_map.find(entity.substr(1, entity.length() - 2));
+		if (lookup != m_entity_map.end()) {
+			success = true;
+			expanded_char = lookup->second;
+		}
+	}
+
+	expanded_str = unicode_to_utf8(std::basic_string<uint32_t>(1, expanded_char));
+	return success;
 }
 
 void TextCleaner::do_work()
