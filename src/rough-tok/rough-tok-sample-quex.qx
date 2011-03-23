@@ -264,7 +264,7 @@ mode FIND_SPLITS_JOINS_BREAKS {
   						  {
   							send_whitespace();
 						  }
-						  self_accumulator_add(Lexeme, LexemeEnd);
+						  self_accumulator_add_character(*LexemeBegin);
 						  self.accumulator_size++;
 						  self << FIND_SPLITS_JOINS_BREAKS; }
   \n						{ if (self.ws_newlines == -1)
@@ -275,7 +275,7 @@ mode FIND_SPLITS_JOINS_BREAKS {
 						  else
 						  	self.ws_newlines++;
 						  self << FIND_SPLITS_JOINS_BREAKS; }
-  \P{White_Space}					{ if (self.ws_newlines == -1)
+  \P{White_Space}				{ if (self.ws_newlines == -1)
   						  {
   							flush_accumulator();
 							self.ws_newlines = 0;
@@ -321,7 +321,7 @@ mode FIND_SPLITS_JOINS {
   						  {
   							send_whitespace();
 						  }
-						  self_accumulator_add(Lexeme, LexemeEnd);
+						  self_accumulator_add_character(*LexemeBegin);
 						  self.accumulator_size++;
 						  self << FIND_SPLITS_JOINS_BREAKS; }
   \n						{ if (self.ws_newlines == -1)
@@ -332,7 +332,7 @@ mode FIND_SPLITS_JOINS {
 						  else
 						  	self.ws_newlines++;
 						  self << FIND_SPLITS_JOINS_BREAKS; }
-  \P{White_Space}					{ if (self.ws_newlines == -1)
+  \P{White_Space}				{ if (self.ws_newlines == -1)
   						  {
   							flush_accumulator();
 							self.ws_newlines = 0;
@@ -379,7 +379,7 @@ mode FIND_SPLITS_BREAKS {
   						  {
   							send_whitespace();
 						  }
-						  self_accumulator_add(Lexeme, LexemeEnd);
+						  self_accumulator_add_character(*LexemeBegin);
 						  self.accumulator_size++;
 						  self << FIND_SPLITS_JOINS_BREAKS; }
   \n						{ if (self.ws_newlines == -1)
@@ -390,7 +390,7 @@ mode FIND_SPLITS_BREAKS {
 						  else
 						  	self.ws_newlines++;
 						  self << FIND_SPLITS_JOINS_BREAKS; }
-  \P{White_Space}					{ if (self.ws_newlines == -1)
+  \P{White_Space}				{ if (self.ws_newlines == -1)
   						  {
   							flush_accumulator();
 							self.ws_newlines = 0;
@@ -428,7 +428,7 @@ mode FIND_JOINS_BREAKS {
   						  {
   							send_whitespace();
 						  }
-						  self_accumulator_add(Lexeme, LexemeEnd);
+						  self_accumulator_add_character(*LexemeBegin);
 						  self.accumulator_size++;
 						  self << FIND_SPLITS_JOINS_BREAKS; }
   \n						{ if (self.ws_newlines == -1)
@@ -439,7 +439,7 @@ mode FIND_JOINS_BREAKS {
 						  else
 						  	self.ws_newlines++;
 						  self << FIND_SPLITS_JOINS_BREAKS; }
-  \P{White_Space}					{ if (self.ws_newlines == -1)
+  \P{White_Space}				{ if (self.ws_newlines == -1)
   						  {
   							flush_accumulator();
 							self.ws_newlines = 0;
@@ -477,7 +477,7 @@ mode FIND_SPLITS {
   						  {
   							send_whitespace();
 						  }
-						  self_accumulator_add(Lexeme, LexemeEnd);
+						  self_accumulator_add_character(*LexemeBegin);
 						  self.accumulator_size++;
 						  self << FIND_SPLITS_JOINS_BREAKS; }
   \n						{ if (self.ws_newlines == -1)
@@ -488,7 +488,7 @@ mode FIND_SPLITS {
 						  else
 						  	self.ws_newlines++;
 						  self << FIND_SPLITS_JOINS_BREAKS; }
-  \P{White_Space}					{ if (self.ws_newlines == -1)
+  \P{White_Space}				{ if (self.ws_newlines == -1)
   						  {
   							flush_accumulator();
 							self.ws_newlines = 0;
@@ -518,7 +518,7 @@ mode FIND_JOINS {
   						  {
   							send_whitespace();
 						  }
-						  self_accumulator_add(Lexeme, LexemeEnd);
+						  self_accumulator_add_character(*LexemeBegin);
 						  self.accumulator_size++;
 						  self << FIND_SPLITS_JOINS_BREAKS; }
   \n						{ if (self.ws_newlines == -1)
@@ -529,7 +529,7 @@ mode FIND_JOINS {
 						  else
 						  	self.ws_newlines++;
 						  self << FIND_SPLITS_JOINS_BREAKS; }
-  \P{White_Space}					{ if (self.ws_newlines == -1)
+  \P{White_Space}				{ if (self.ws_newlines == -1)
   						  {
   							flush_accumulator();
 							self.ws_newlines = 0;
@@ -559,7 +559,7 @@ mode FIND_BREAKS {
   						  {
   							send_whitespace();
 						  }
-						  self_accumulator_add(Lexeme, LexemeEnd);
+						  self_accumulator_add_character(*LexemeBegin);
 						  self.accumulator_size++;
 						  self << FIND_SPLITS_JOINS_BREAKS; }
   \n						{ if (self.ws_newlines == -1)
@@ -570,7 +570,7 @@ mode FIND_BREAKS {
 						  else
 						  	self.ws_newlines++;
 						  self << FIND_SPLITS_JOINS_BREAKS; }
-  \P{White_Space}					{ if (self.ws_newlines == -1)
+  \P{White_Space}				{ if (self.ws_newlines == -1)
   						  {
   							flush_accumulator();
 							self.ws_newlines = 0;
@@ -592,7 +592,7 @@ mode READ_ON {
   						  {
   							send_whitespace();
 						  }
-						  self_accumulator_add(Lexeme, LexemeEnd);
+						  self_accumulator_add_character(*LexemeBegin);
 						  self.accumulator_size++;
 						  self << FIND_SPLITS_JOINS_BREAKS; }
   \n						{ if (self.ws_newlines == -1)
@@ -603,7 +603,7 @@ mode READ_ON {
 						  else
 						  	self.ws_newlines++;
 						  self << FIND_SPLITS_JOINS_BREAKS; }
-  \P{White_Space}					{ if (self.ws_newlines == -1)
+  \P{White_Space}				{ if (self.ws_newlines == -1)
   						  {
   							flush_accumulator();
 							self.ws_newlines = 0;
