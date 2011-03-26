@@ -3,7 +3,7 @@
 
 #cmakedefine CHUNK_SIZE @CHUNK_SIZE@
 #cmakedefine ACCUMULATOR_CAPACITY @ACCUMULATOR_CAPACITY@
-#cmakedefine USE_ICONV @USE_ICONV@
-#cmakedefine USE_ICU @USE_ICU@
+#cmakedefine USE_ICONV
+#cmakedefine USE_ICU
 
 #endif
