@@ -93,12 +93,9 @@ bool TextCleaner::expand_entity(std::string const &entity, std::string &expanded
 
 void TextCleaner::do_work()
 {
-	if (!m_hide_xml)
-	{
+	if (!m_hide_xml) {
 		TEXTCLEANER(clean_entities, EntityCleaner, QUEX_PREPROC_NOXML_);
-	}
-	else
-	{
+	} else {
 		TEXTCLEANER(clean_xml, XmlCleaner, QUEX_PREPROC_WITHXML_);
 	}
 }

@@ -1,37 +1,106 @@
 cmake_minimum_required (VERSION 2.6.4)
-
 project (TrainableTokenizer)
 
-find_program (QUEX quex.bat quex PATHS ENV QUEX_PATH)
 
-add_custom_command (OUTPUT trtok_clean_entities_EntityCleaner
-			   trtok_clean_entities_EntityCleaner.cpp
-			   trtok_clean_entities_EntityCleaner-configuration
-			   trtok_clean_entities_EntityCleaner-token_ids
-			   trtok_clean_entities_EntityCleaner-token
+set (CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/../CMake/")
+set (LIBS)
+
+set (Boost_USE_STATIC_LIBS ON)
+set (Boost_USE_MULTITHREADED ON)
+set (Boost_USE_STATIC_RUNTIME OFF)
+find_package (Boost REQUIRED program_options filesystem thread)
+include_directories (${Boost_INCLUDE_DIRS}})
+link_directories (${Boost_LIBRARY_DIRS})
+set (LIBS ${LIBS} ${Boost_LIBRARIES})
+
+find_package (TBB REQUIRED)
+include_directories (${TBB_INCLUDE_DIRS})
+link_directories (${TBB_LIBRARY_DIRS})
+set (LIBS ${LIBS} ${TBB_LIBRARIES})
+
+find_package (LIBICONV)
+find_package (ICU)
+
+if (LIBICONV_FOUND)
+  set (USE_ICONV ON)
+  set (USE_ICU OFF)
+  include_directories (${LIBICONV_INCLUDE_DIRS})
+  set (LIBS ${LIBS} ${LIBICONV_LIBRARIES})
+  message (STATUS "Using libiconv")
+elseif (ICU_FOUND)
+  set (USE_ICU ON)
+  set (USE_ICONV OFF)
+  include_directories (${ICU_INCLUDE_DIRS})
+  link_directories (${ICU_LIBRARY_DIRS})
+  set (LIBS ${LIBS} ${ICU_LIBRARIES})
+  message (STATUS "Using ICU")
+else (LIBICONV_FOUND)
+  message (FATAL_ERROR "Neither libiconv nor ICU have been found.")
+endif (LIBICONV_FOUND)
+
+find_package (PCRECPP REQUIRED)
+include_directories (${PCRECPP_INCLUDE_DIRS})
+set (LIBS ${LIBS} ${PCRECPP_LIBRARIES})
+
+find_package (LTDL REQUIRED)
+include_directories (${LTDL_INCLUDE_DIRS})
+set (LIBS ${LIBS} ${LTDL_LIBRARIES})
+
+
+set (CHUNK_SIZE 100 CACHE STRING "Number of rough tokens constituting a work unit in the pipeline.")
+set (ACCUMULATOR_CAPACITY 256 CACHE STRING "Maximum size of Quex's accumulator in the TextCleaner stage.")
+
+
+file (MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/quex_files)
+file (MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/configured_headers)
+
+
+configure_file (${CMAKE_CURRENT_SOURCE_DIR}/configuration.hpp.cmake
+		${CMAKE_CURRENT_BINARY_DIR}/configured_headers/configuration.hpp)
+
+
+find_program (QUEX quex quex.bat quex-exe.py REQUIRED HINTS ENV QUEX_PATH DOC "Path to Quex's executable.")
+if (USE_ICONV)
+  set (QUEX_CONVERTER "--iconv")
+elseif (USE_ICU)
+  set (QUEX_CONVERTER "--icu")
+endif (USE_ICONV)
+
+set (QUEX_ENTITY quex_files/trtok_clean_entities_EntityCleaner)
+add_custom_command (OUTPUT ${QUEX_ENTITY} ${QUEX_ENTITY}.cpp ${QUEX_ENTITY}-token
+			   ${QUEX_ENTITY}-configuration ${QUEX_ENTITY}-token_ids
 		    COMMAND quex --mode-files		${CMAKE_CURRENT_SOURCE_DIR}/clean_entities.qx
 				 --engine	        trtok::clean_entities::EntityCleaner
 				 --buffer-element-size	4
 				 --token-prefix		QUEX_PREPROC_NOXML_
+				 --odir			${CMAKE_CURRENT_BINARY_DIR}/quex_files
 				 --iconv
 		    DEPENDS clean_entities.qx VERBATIM
-		    COMMENT "Building EntityCleaner...")
+		    COMMENT "Building EntityCleaner with quex")
 
-add_custom_command (OUTPUT trtok_clean_xml_XmlCleaner
-			   trtok_clean_xml_XmlCleaner.cpp
-			   trtok_clean_xml_XmlCleaner-configuration
-			   trtok_clean_xml_XmlCleaner-token_ids
-			   trtok_clean_xml_XmlCleaner-token
+set (QUEX_XML quex_files/trtok_clean_xml_XmlCleaner)
+add_custom_command (OUTPUT ${QUEX_XML} ${QUEX_XML}.cpp ${QUEX_XML}-token
+			   ${QUEX_XML}-configuration ${QUEX_XML}-token_ids
 		    COMMAND quex --mode-files		${CMAKE_CURRENT_SOURCE_DIR}/clean_xml.qx
 			         --engine		trtok::clean_xml::XmlCleaner
 				 --buffer-element-size	4
 				 --token-prefix		QUEX_PREPROC_WITHXML_
+				 --odir			${CMAKE_CURRENT_BINARY_DIR}/quex_files
 				 --iconv
 		    DEPENDS clean_xml.qx VERBATIM
-		    COMMENT "Building XmlCleaner...")
+		    COMMENT "Building XmlCleaner with quex")
 
-include_directories (${CMAKE_CURRENT_BINARY_DIR} $ENV{QUEX_PATH} .)
 
-add_executable (trtok main.cpp text_cleaner.cpp trtok_clean_entities_EntityCleaner.cpp trtok_clean_xml_XmlCleaner.cpp)
+include_directories (${CMAKE_CURRENT_SOURCE_DIR}
+		     ${CMAKE_CURRENT_BINARY_DIR}/configured_headers
+		     ${CMAKE_CURRENT_BINARY_DIR}/quex_files
+		     $ENV{QUEX_PATH})
 
-target_link_libraries (trtok boost_program_options tbb)
+set (SRCS main.cpp text_cleaner.cpp ${QUEX_ENTITY}.cpp ${QUEX_XML}.cpp)
+add_executable (trtok ${SRCS})
+
+target_link_libraries (trtok ${LIBS})
+
+
+set (TO_CLEAN ${CMAKE_CURRENT_BINARY_DIR}/configured_headers/configuration.hpp)
+set_directory_properties (PROPERTIES ADDITIONAL_MAKE_CLEAN_FILES ${TO_CLEAN})
