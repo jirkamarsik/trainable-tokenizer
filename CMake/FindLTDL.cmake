@@ -1,4 +1,4 @@
-# Tries to find libtool's dynamic loading library.
+# - Tries to find libtool's dynamic loading library.
 # Sets the following variables:
 #	LTDL_FOUND
 # 	LTDL_INCLUDE_DIRS

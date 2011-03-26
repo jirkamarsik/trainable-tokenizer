@@ -12,7 +12,7 @@ include (CheckSymbolExists)
 check_symbol_exists (iconv_open iconv.h LIBICONV_JUST_WORKS QUIET)
 
 if (LIBICONV_JUST_WORKS)
-  message (STATUS "Found libiconv")
+  message (STATUS "Found LIBICONV")
   set (LIBICONV_FOUND ON)
 else (LIBICONV_JUST_WORKS)
   # A package full of convenience functions for writing Find modules
