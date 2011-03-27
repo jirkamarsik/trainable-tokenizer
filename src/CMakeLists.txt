@@ -58,6 +58,10 @@ include_directories (${LTDL_INCLUDE_DIRS})
 link_directories (${LTDL_LIBRARY_DIRS})
 set (LIBS ${LIBS} ${LTDL_LIBRARIES})
 
+find_package (PythonInterp REQUIRED)
+string (REPLACE "\\" "\\\\" PYTHON_EXECUTABLE_ESCAPED ${PYTHON_EXECUTABLE})
+string (REPLACE "\"" "\\\"" PYTHON_EXECUTABLE_ESCAPED ${PYTHON_EXECUTABLE_ESCAPED})
+set (PYTHON_EXECUTABLE_ESCAPED "\"${PYTHON_EXECUTABLE_ESCAPED}\"")
 
 set (CHUNK_SIZE 100 CACHE STRING "Number of rough tokens constituting a work unit in the pipeline.")
 set (ACCUMULATOR_CAPACITY 256 CACHE STRING "Maximum size of Quex's accumulator in the TextCleaner stage.")
