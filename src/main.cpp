@@ -3,7 +3,6 @@
 #include <string>
 #include <vector>
 #include <algorithm>
-#include <iterator>
 #include <boost/program_options.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/unordered_map.hpp>
@@ -18,7 +17,9 @@ using namespace trtok;
 namespace po = boost::program_options;
 namespace fs = boost::filesystem;
 
-bool path_compare (fs::path const &a, fs::path const &b) {
+/* A comparison function used later.
+ * Compares paths first by filename then by path length */
+bool path_compare(fs::path const &a, fs::path const &b) {
 	if (a.filename() < b.filename()) {
 		return true;
 	} else if (a.filename() > b.filename()) {
@@ -32,11 +33,16 @@ bool path_compare (fs::path const &a, fs::path const &b) {
 	}
 }
 
-char *str_to_lower(string const &str) {
-	
+// FOR DEBUGGING PURPOSES
+void print_path(fs::path const &path) {
+	cout << path << endl;
 }
 
 int main(int argc, char const **argv) {
+	// PARSING AND CHECKING THE ARGUMENTS
+
+	/* We declare the following variables which will catch the values
+	 * of options coming from the command line. */
 	string s_mode, s_scheme;
 	string s_encoding;
 	bool o_help;
@@ -44,6 +50,9 @@ int main(int argc, char const **argv) {
 	bool o_hide_xml, o_expand_entities, o_keep_entities_expanded;
 	bool o_print_questions;
 
+	/* We use the Boost Program Options library to handle option parsing.
+	 * We first start off by enumerating the names, types and descriptions
+	 * of our options. */
 	po::options_description explicit_options;
 	explicit_options.add_options()
 		("encoding,c", po::value<string>(&s_encoding)->default_value("UTF-8"),
@@ -62,12 +71,16 @@ int main(int argc, char const **argv) {
 		("print-questions,q", po::bool_switch(&o_print_questions), "Prints the questions presented to the maximum entropy classifier. In TOKENIZE mode, the classifier's answer is present as well; in TRAIN mode, it is the answer induced from the data. In EVALUATE mode, both the answer given by the classifier and the correct answer are output.")
 		;
 
+	/* Positional arguments such as the mode and scheme need to be described
+	 * as well. They are defined in a different structure as we don't want
+	 * to list them as options when printing the usage.*/
 	po::options_description positional_options;
 	positional_options.add_options()
 		("mode", po::value<string>(&s_mode)->required(),"")
 		("scheme", po::value<string>(&s_scheme)->required(), "")
 		;
-	
+
+	// We inform the library of the order of these two positional arguments.
 	po::positional_options_description pod;
 	pod.add("mode", 1).add("scheme", 1);
 
@@ -77,23 +90,22 @@ int main(int argc, char const **argv) {
 	cmd_line.options(all_options).positional(pod);
 
 	po::variables_map vm;
-	bool error_in_args = false;
 
 	try {
 		po::store(cmd_line.run(), vm);
 		po::notify(vm);
-	} catch (po::unknown_option) {
-		error_in_args = true;
+	} catch (po::unknown_option const &exc) {
+		cerr << "Encountered unknown option " << exc.get_option_name() << ". See trtok --help for proper usage." << endl;
+		return 1;
 	} catch (po::required_option const &exc) {
-		cout << "Missing mandatory parameter " << exc.get_option_name() << "." << endl;
+		cerr << "Missing mandatory parameter " << exc.get_option_name() << ". See trtok --help for proper usage." << endl;
 		return 1;
 	}
 	
-
-	if (o_help || error_in_args) {
-		error_in_args ? cerr : cout << "Usage: trtok <prepare|train|tokenize|evaluate> SCHEME [OPTION]... [FILE]..." << endl;
-		error_in_args ? cerr : cout << explicit_options;
-		exit(error_in_args ? 1 : 0);
+	if (o_help) {
+		cout << "Usage: trtok <prepare|train|tokenize|evaluate> SCHEME [OPTION]... [FILE]..." << endl;
+		cout << explicit_options;
+		return 0;
 	}
 
 	char *e_trtok_path = getenv("TRTOK_PATH");
@@ -112,7 +124,7 @@ int main(int argc, char const **argv) {
 		return 1;
 	}
 
-	fs::path scheme_rel_path = fs:: path(s_scheme);
+	fs::path scheme_rel_path = fs::path(s_scheme);
 	fs::path scheme_path = schemes_root / scheme_rel_path;
 	if (!fs::is_directory(scheme_path)) {
 		cerr << "Error: Scheme directory " << s_scheme << " not found in the schemes directory.\n";
@@ -124,8 +136,30 @@ int main(int argc, char const **argv) {
 		return 1;
 	}
 
+
+	// READING THE CONFIG FILES
+	//
+	// Variables still relevant: 
+	//	schemes_root / scheme_rel_path == scheme_path 
+	//	o_*, s_* options and settings
+
+
+	/* We will iterate over the elements of the relative path to the selected
+	 * scheme. By appending them in order to the scheme directory, we get
+	 * the paths to all the parent schemes of the selected schemes. We use
+	 * this to extract all filepaths within the "scheme lineage".*/
 	scheme_path = schemes_root;
 	vector<fs::path> relevant_files;
+	
+	// We also iterate over the contents of the 'schemes' directory letting
+	// users place universal definitions inside them (good for building
+	// a vocabulary of properties use in features).
+	for (fs::directory_iterator j(scheme_path); j != fs::directory_iterator(); j++) {
+		fs::path file_path = j->path();
+		if (!fs::is_directory(file_path)) {
+			relevant_files.push_back(file_path);
+		}
+	}
 	for (fs::path::const_iterator i = scheme_rel_path.begin(); i != scheme_rel_path.end(); i++) {
 		scheme_path /= *i;
 		for (fs::directory_iterator j(scheme_path); j != fs::directory_iterator(); j++) {
@@ -136,28 +170,52 @@ int main(int argc, char const **argv) {
 		}
 	}
 
+	/* We sort the files so that all instances of a filename are clustered
+	 * together beginning with the most specific one. */
 	sort(relevant_files.begin(), relevant_files.end(), path_compare);
+
+	/* We then split the files into bins according to their extension and
+	 * look for special filenames (train.fnre etc...).
+	 * If case folding is implented in the future, it might be feasible to
+	 * make the extensions completely case-insensitive. */
 	vector<fs::path> split_files, join_files, begin_files, end_files, enump_files, rep_files;
 	boost::unordered_map< string, vector<fs::path>* > file_vectors;
-	file_vectors["split"] = &split_files;
-	file_vectors["SPLIT"] = &split_files;
-	file_vectors["join"] = &join_files;
-	file_vectors["JOIN"] = &join_files;
-	file_vectors["begin"] = &begin_files;
-	file_vectors["BEGIN"] = &begin_files;
-	file_vectors["end"] = &end_files;
-	file_vectors["END"] = &end_files;
-	file_vectors["enump"] = &enump_files;
-	file_vectors["ENUMP"] = &enump_files;
-	file_vectors["rep"] = &rep_files;
-	file_vectors["REP"] = &rep_files;
+	file_vectors[".split"] = &split_files;
+	file_vectors[".SPLIT"] = &split_files;
+	file_vectors[".join"] = &join_files;
+	file_vectors[".JOIN"] = &join_files;
+	file_vectors[".begin"] = &begin_files;
+	file_vectors[".BEGIN"] = &begin_files;
+	file_vectors[".end"] = &end_files;
+	file_vectors[".END"] = &end_files;
+	file_vectors[".enump"] = &enump_files;
+	file_vectors[".ENUMP"] = &enump_files;
+	file_vectors[".rep"] = &rep_files;
+	file_vectors[".REP"] = &rep_files;
+
+	/* When we encounter two paths with the same filename, we take the former.
+	 * The following "duplicates" are guaranteed to be less specific.*/
+	string last_filename = "";
+	typedef boost::unordered_map< string, vector<fs::path>* >::iterator map_iter;
 	for (vector<fs::path>::const_iterator i = relevant_files.begin(); i != relevant_files.end(); i++) {
-		typedef boost::unordered_map< string, vector<fs::path>* >::iterator map_iter;
+		if (i->filename() == last_filename) {
+			continue;
+		}
+
 		map_iter lookup = file_vectors.find(i->extension().string());
 		if (lookup != file_vectors.end()) {
 			lookup->second->push_back(*i);
 		}
+		last_filename = i->filename().string();
 	}
+
+	
+
+	// Debugging code
+	for_each(split_files.begin(), split_files.end(), print_path);
+
+	return 0;
+
 
 	// Testing code
 	tbb::concurrent_queue<cutout_t> cutout_queue;
