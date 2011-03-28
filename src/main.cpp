@@ -11,6 +11,7 @@
 #include "configuration.hpp"
 #include "text_cleaner.hpp"
 #include "cutout_t.hpp"
+#include "rough_tok_compile.hpp"
 
 using namespace std;
 using namespace trtok;
@@ -142,6 +143,7 @@ int main(int argc, char const **argv) {
 	// Variables still relevant: 
 	//	schemes_root / scheme_rel_path == scheme_path 
 	//	o_*, s_* options and settings
+	//	e_* environment variables
 
 
 	/* We will iterate over the elements of the relative path to the selected
@@ -198,6 +200,7 @@ int main(int argc, char const **argv) {
 	string last_filename = "";
 	typedef boost::unordered_map< string, vector<fs::path>* >::iterator map_iter;
 	for (vector<fs::path>::const_iterator i = relevant_files.begin(); i != relevant_files.end(); i++) {
+		// Scheme inheritance: only the most specific instance of a file
 		if (i->filename() == last_filename) {
 			continue;
 		}
@@ -209,7 +212,9 @@ int main(int argc, char const **argv) {
 		last_filename = i->filename().string();
 	}
 
-	
+	fs::path build_path = fs::path(e_trtok_path) / fs::path("build") / scheme_rel_path;
+	fs::create_directories(build_path);
+	compile_rough_lexer(split_files, join_files, begin_files, end_files, build_path);
 
 	// Debugging code
 	for_each(split_files.begin(), split_files.end(), print_path);
