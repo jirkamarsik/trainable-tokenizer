@@ -13,6 +13,11 @@ inline bool is_whitespace(uint32_t c)
 	    || ((c >= 0x2028) && (c <= 0x2029)) || (c == 0x202F) || (c == 0x205F) || (c == 0x3000);
 }
 
+inline bool is_newline(uint32_t c)
+{
+	return (c == 0x0A) || (c == 0x0D);
+}
+
 std::basic_string<uint32_t> utf8_to_unicode(std::string const &str);
 
 }

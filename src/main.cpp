@@ -219,13 +219,15 @@ int main(int argc, char const **argv) {
 	try {
 		compile_rough_lexer(split_files, join_files, begin_files, end_files, build_path);
 	} catch (config_exception const &exc) {
-		cerr << "Error: " << exc.what() << endl;
+		cerr << exc.what() << endl;
 		return 1;
 	}
 
 	// Debugging code
 	for_each(split_files.begin(), split_files.end(), print_path);
-
+	for_each(join_files.begin(), join_files.end(), print_path);
+	for_each(begin_files.begin(), begin_files.end(), print_path);
+	for_each(end_files.begin(), end_files.end(), print_path);
 	return 0;
 
 
