@@ -7,7 +7,7 @@
 namespace fs = boost::filesystem;
 
 namespace trtok {
-	void compile_rough_lexer(std::vector<fs::path> const &split_files,
+	bool compile_rough_lexer(std::vector<fs::path> const &split_files,
 				 std::vector<fs::path> const &join_files,
 				 std::vector<fs::path> const &begin_files,
 				 std::vector<fs::path> const &end_files,

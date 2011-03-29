@@ -3,6 +3,7 @@
 
 #include <string>
 #include <istream>
+#include <cstdint>
 #include <boost/unordered_map.hpp>
 #include <tbb/concurrent_queue.h>
 

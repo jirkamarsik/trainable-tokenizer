@@ -107,8 +107,10 @@ include_directories (${CMAKE_CURRENT_SOURCE_DIR}
 		     ${CMAKE_CURRENT_BINARY_DIR}/quex_files
 		     $ENV{QUEX_PATH})
 
+add_definitions (--std=c++0x)
+
 set (SRCS main.cpp text_cleaner.cpp ${QUEX_ENTITY}.cpp ${QUEX_XML}.cpp
-	  rough_tok_compile.cpp)
+	  rough_tok_compile.cpp utils.cpp)
 add_executable (trtok ${SRCS})
 
 target_link_libraries (trtok ${LIBS})

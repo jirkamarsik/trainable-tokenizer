@@ -12,6 +12,7 @@
 #include "text_cleaner.hpp"
 #include "cutout_t.hpp"
 #include "rough_tok_compile.hpp"
+#include "config_exception.hpp"
 
 using namespace std;
 using namespace trtok;
@@ -214,7 +215,13 @@ int main(int argc, char const **argv) {
 
 	fs::path build_path = fs::path(e_trtok_path) / fs::path("build") / scheme_rel_path;
 	fs::create_directories(build_path);
-	compile_rough_lexer(split_files, join_files, begin_files, end_files, build_path);
+
+	try {
+		compile_rough_lexer(split_files, join_files, begin_files, end_files, build_path);
+	} catch (config_exception const &exc) {
+		cerr << "Error: " << exc.what() << endl;
+		return 1;
+	}
 
 	// Debugging code
 	for_each(split_files.begin(), split_files.end(), print_path);
