@@ -1,8 +1,8 @@
-cmake_minimum_required (VERSION 2.6.4)
+cmake_minimum_required (VERSION 2.8)
 project (TrainableTokenizer)
 
 
-set (CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/../CMake/")
+set (CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/CMake/")
 set (LIBS)
 
 set (Boost_USE_STATIC_LIBS ON)
@@ -60,14 +60,31 @@ set (LIBS ${LIBS} ${LTDL_LIBRARIES})
 
 set (CHUNK_SIZE 100 CACHE STRING "Number of rough tokens constituting a work unit in the pipeline.")
 set (ACCUMULATOR_CAPACITY 256 CACHE STRING "Maximum size of Quex's accumulator in the TextCleaner stage.")
+set (QUEX_TOKEN_ID_OFFSET 10000)
 
 
 file (MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/quex_files)
 file (MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/configured_headers)
+file (MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/code)
 
 
 configure_file (${CMAKE_CURRENT_SOURCE_DIR}/configuration.hpp.cmake
 		${CMAKE_CURRENT_BINARY_DIR}/configured_headers/configuration.hpp)
+
+configure_file (${CMAKE_CURRENT_SOURCE_DIR}/rough_tok/rough_tok_wrapper.cpp.cmake
+		${CMAKE_CURRENT_BINARY_DIR}/code/rough_tok_wrapper.cpp)
+
+configure_file (${CMAKE_CURRENT_SOURCE_DIR}/rough_tok/rough_tok_wrapper.hpp
+		${CMAKE_CURRENT_BINARY_DIR}/code/rough_tok_wrapper.hpp COPYONLY)
+
+configure_file (${CMAKE_CURRENT_SOURCE_DIR}/CMake/FindICU.cmake
+		${CMAKE_CURRENT_BINARY_DIR}/code/FindICU.cmake COPYONLY)
+
+configure_file (${CMAKE_CURRENT_SOURCE_DIR}/CMake/FindLIBICONV.cmake
+		${CMAKE_CURRENT_BINARY_DIR}/code/FindLIBICONV.cmake COPYONLY)
+
+configure_file (${CMAKE_CURRENT_SOURCE_DIR}/rough_tok/CMakeLists.txt.cmake
+		${CMAKE_CURRENT_BINARY_DIR}/code/CMakeLists.txt @ONLY)
 
 
 find_program (QUEX quex quex.bat quex-exe.py REQUIRED HINTS ENV QUEX_PATH DOC "Path to Quex's executable.")
@@ -85,7 +102,7 @@ add_custom_command (OUTPUT ${QUEX_ENTITY} ${QUEX_ENTITY}.cpp ${QUEX_ENTITY}-toke
 				 --buffer-element-size	4
 				 --token-prefix		QUEX_PREPROC_NOXML_
 				 --odir			${CMAKE_CURRENT_BINARY_DIR}/quex_files
-				 --iconv
+				 ${QUEX_CONVERTER}
 		    DEPENDS clean_entities.qx VERBATIM
 		    COMMENT "Building EntityCleaner with quex")
 
@@ -97,7 +114,7 @@ add_custom_command (OUTPUT ${QUEX_XML} ${QUEX_XML}.cpp ${QUEX_XML}-token
 				 --buffer-element-size	4
 				 --token-prefix		QUEX_PREPROC_WITHXML_
 				 --odir			${CMAKE_CURRENT_BINARY_DIR}/quex_files
-				 --iconv
+				 ${QUEX_CONVERTER}
 		    DEPENDS clean_xml.qx VERBATIM
 		    COMMENT "Building XmlCleaner with quex")
 
