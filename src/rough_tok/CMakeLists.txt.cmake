@@ -30,6 +30,9 @@ elseif (USE_ICU)
   message (STATUS "Using ICU")
 endif (USE_ICONV)
 
+build_command (BUILD_COMMAND_VAR)
+file (WRITE build_command ${BUILD_COMMAND_VAR})
+
 find_program (QUEX quex quex.bat quex-exe.py REQUIRED HINTS ENV QUEX_PATH DOC "Path to Quex's executable.")
 if (USE_ICONV)
   set (QUEX_CONVERTER "--iconv")

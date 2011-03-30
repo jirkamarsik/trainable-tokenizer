@@ -3,9 +3,10 @@
 
 #include <string>
 #include <istream>
-#include <cstdint>
 #include <boost/unordered_map.hpp>
 #include <tbb/concurrent_queue.h>
+#include <boost/cstdint.hpp>
+typedef boost::uint32_t uint32_t;
 
 #include "cutout_t.hpp"
 

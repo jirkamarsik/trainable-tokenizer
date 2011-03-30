@@ -1,6 +1,7 @@
 #include <string>
-#include <cstdint>
 #include <stdexcept>
+#include <boost/cstdint.hpp>
+typedef boost::uint32_t uint32_t;
 
 #include "utils.hpp"
 

@@ -1,7 +1,8 @@
 #include <cstdlib>
-#include <cstdint>
 #include <string>
 #include <boost/unordered_map.hpp>
+#include <boost/cstdint.hpp>
+typedef boost::uint32_t uint32_t;
 
 #include "text_cleaner.hpp"
 #include "trtok_clean_entities_EntityCleaner"

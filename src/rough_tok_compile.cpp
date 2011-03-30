@@ -6,10 +6,13 @@
 #include <algorithm>
 #include <iterator>
 #include <cstring>
-#include <cstdint>
+#include <cstdlib>
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
+#include <boost/cstdint.hpp>
+typedef boost::uint32_t uint32_t;
 
+#include "configuration.hpp"
 #include "config_exception.hpp"
 #include "utils.hpp"
 
@@ -19,17 +22,17 @@ namespace trtok {
 
 /* Checks that the files in our list of files match those listed in the file. */
 inline bool check_file_lists_match(std::vector<fs::path> const &file_list,
-				   std::istream &file_list_stream) {
+				   std::istream &file_list_istream) {
 	std::string file_name;
 
 	typedef std::vector<fs::path>::const_iterator iter;
 	for (iter i = file_list.begin(); i != file_list.end(); i++) {
-		if (!file_list_stream) {
+		if (!file_list_istream) {
 			// We have more files than is written in the file
 			return false;
 		}
-		getline(file_list_stream, file_name);
-		if (fs::path(file_name) != *i) {
+		getline(file_list_istream, file_name);
+		if (file_name != i->generic_string()) {
 			// We have different file from what is in the file
 			return false;
 		}
@@ -234,7 +237,7 @@ bool compile_rough_lexer(std::vector<fs::path> const &split_files,
 {
 	fs::current_path(build_path);
 	
-	bool files_changed = false;
+	bool files_changed = true;
 
 	/* The set of files specifying the rough tokenizer's behaviour
 	 * might have changed between invocations. If so, we have to
@@ -242,30 +245,28 @@ bool compile_rough_lexer(std::vector<fs::path> const &split_files,
 	 * we built the tokenizer the last item is stored in a file. */
 	fs::path file_list_path("rough_tok_files");
 	if (fs::exists(file_list_path) && !fs::is_directory(file_list_path)) {
-		fs::ifstream file_list_stream(file_list_path);
+		fs::ifstream file_list_istream(file_list_path);
 		bool file_set_changed = false;
 		
-		if (!check_file_lists_match(split_files, file_list_stream)) {
+		if (!check_file_lists_match(split_files, file_list_istream)) {
 			file_set_changed = true;
 		}
-		if (!file_set_changed && !check_file_lists_match(join_files, file_list_stream)) {
+		if (!file_set_changed && !check_file_lists_match(join_files, file_list_istream)) {
 			file_set_changed = true;
 		}
-		if (!file_set_changed && !check_file_lists_match(begin_files, file_list_stream)) {
+		if (!file_set_changed && !check_file_lists_match(begin_files, file_list_istream)) {
 			file_set_changed = true;
 		}
-		if (!file_set_changed && !check_file_lists_match(end_files, file_list_stream)) {
+		if (!file_set_changed && !check_file_lists_match(end_files, file_list_istream)) {
 			file_set_changed = true;
 		}
-		if (!file_set_changed && file_list_stream) {
+		if (!file_set_changed && file_list_istream) {
 			// There are still more filenames in the file
 			file_set_changed = true;
 		}
-		file_list_stream.close();
+		file_list_istream.close();
 
-		if (file_set_changed) {
-			files_changed = true;
-		} else {
+		if (!file_set_changed) {
 			/* Although the same set of files has been used to generate
 			 * the last lexer, the files may have been modified since.
 			 * The CMake generated build system may or may not perform
@@ -273,6 +274,8 @@ bool compile_rough_lexer(std::vector<fs::path> const &split_files,
 			 * build command might be too costly for every trtok startup,
 			 * so we check the filestamps by hand first. */
 			std::time_t compiled_time = fs::last_write_time(file_list_path);
+
+			std::cout << "File set hasn't been changed.";
 
 			typedef std::vector<fs::path>::const_iterator iter;
 			iter i = split_files.begin();
@@ -289,9 +292,6 @@ bool compile_rough_lexer(std::vector<fs::path> const &split_files,
 				i++;
 			}
 		}
-	} else {
-		// We have never built this rough tokenizer
-		files_changed = true;
 	}
 
 		
@@ -428,6 +428,72 @@ bool compile_rough_lexer(std::vector<fs::path> const &split_files,
 					}
 
 		quex_file.close();
+
+		// BUILDING THE ROUGHLEXER
+
+		fs::path trtok_path(getenv("TRTOK_PATH"));
+		fs::path code_path = trtok_path / fs::path("code");
+		fs::path cmake_list_path = code_path / fs::path("CMakeLists.txt");
+		if (!exists(cmake_list_path)) {
+			throw config_exception("Error: Missing CMakeLists.txt in $TRTOK_PATH/code directory.\n"
+					       "       Please restore the code directory to its original state.\n");
+		}
+		if (!exists(code_path / fs::path("rough_tok_wrapper.cpp"))) {
+			throw config_exception("Error: Missing rough_tok_wrapper.cpp in $TRTOK_PATH/code directory.\n"
+					       "       Please restore the code directory to its original state.\n");
+		}
+		if (!exists(code_path / fs::path("rough_tok_wrapper.hpp"))) {
+			throw config_exception("Error: Missing rough_tok_wrapper.hpp in $TRTOK_PATH/code directory.\n"
+					       "       Please restore the code directory to its original state.\n");
+		}
+		if (!exists(code_path / fs::path("FindLIBICONV.cmake"))) {
+			throw config_exception("Error: Missing FindLIBICONV.cmake in $TRTOK_PATH/code directory.\n"
+					       "       Please restore the code directory to its original state.\n");
+		}
+		if (!exists(code_path / fs::path("FindICU.cmake"))) {
+			throw config_exception("Error: Missing FindICU.cmake in $TRTOK_PATH/code directory.\n"
+					       "       Please restore the code directory to its original state.\n");
+		}
+
+		fs::copy_file(cmake_list_path, build_path / fs::path("CMakeLists.txt"), fs::copy_option::overwrite_if_exists);
+
+		int return_code = system(CMAKE_COMMAND " .");
+		if (return_code != EXIT_SUCCESS) {
+			throw config_exception("Error: CMake exited with an error code when compiling the rough tokenizer.");
+		}
+
+		fs::ifstream build_command_file(build_path / fs::path("build_command"));
+		std::string build_command;
+		getline(build_command_file, build_command);
+		build_command_file.close();
+
+		return_code = system(build_command.c_str());
+		if (return_code != EXIT_SUCCESS) {
+			throw config_exception("Error: The build system exited with an error code when compiling the rough tokenizer.");
+		}
+
+		// And finally we write the list of files that defined this lexer
+		// and "stamp" them with the current time.
+		fs::ofstream file_list_ostream(file_list_path);
+
+		typedef std::vector<fs::path>::const_iterator iter;
+		for (iter i = split_files.begin(); i != split_files.end(); i++) {
+			file_list_ostream << i->generic_string() << std::endl;
+		}
+
+		for (iter i = join_files.begin(); i != join_files.end(); i++) {
+			file_list_ostream << i->generic_string() << std::endl;
+		}
+
+		for (iter i = begin_files.begin(); i != begin_files.end(); i++) {
+			file_list_ostream << i->generic_string() << std::endl;
+		}
+
+		for (iter i = end_files.begin(); i != end_files.end(); i++) {
+			file_list_ostream << i->generic_string() << std::endl;
+		}
+
+		file_list_ostream.close();
 	}
 }
 

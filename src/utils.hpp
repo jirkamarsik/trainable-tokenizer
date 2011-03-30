@@ -2,7 +2,8 @@
 #define UTILS_INCLUDE_GUARD
 
 #include <string>
-#include <cstdint>
+#include <boost/cstdint.hpp>
+typedef boost::uint32_t uint32_t;
 
 namespace trtok {
 

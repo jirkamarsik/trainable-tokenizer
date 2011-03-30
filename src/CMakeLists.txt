@@ -69,7 +69,8 @@ file (MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/code)
 
 
 configure_file (${CMAKE_CURRENT_SOURCE_DIR}/configuration.hpp.cmake
-		${CMAKE_CURRENT_BINARY_DIR}/configured_headers/configuration.hpp)
+		${CMAKE_CURRENT_BINARY_DIR}/configured_headers/configuration.hpp
+		ESCAPE_QUOTES)
 
 configure_file (${CMAKE_CURRENT_SOURCE_DIR}/rough_tok/rough_tok_wrapper.cpp.cmake
 		${CMAKE_CURRENT_BINARY_DIR}/code/rough_tok_wrapper.cpp)
@@ -123,8 +124,6 @@ include_directories (${CMAKE_CURRENT_SOURCE_DIR}
 		     ${CMAKE_CURRENT_BINARY_DIR}/configured_headers
 		     ${CMAKE_CURRENT_BINARY_DIR}/quex_files
 		     $ENV{QUEX_PATH})
-
-add_definitions (--std=c++0x)
 
 set (SRCS main.cpp text_cleaner.cpp ${QUEX_ENTITY}.cpp ${QUEX_XML}.cpp
 	  rough_tok_compile.cpp utils.cpp)
