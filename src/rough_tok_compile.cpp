@@ -260,9 +260,15 @@ bool compile_rough_lexer(std::vector<fs::path> const &split_files,
 		if (!file_set_changed && !check_file_lists_match(end_files, file_list_istream)) {
 			file_set_changed = true;
 		}
-		if (!file_set_changed && file_list_istream) {
-			// There are still more filenames in the file
-			file_set_changed = true;
+		if (!file_set_changed) {
+			// There could still be more filenames in the file
+			while (file_list_istream) {
+				std::string line;
+				getline(file_list_istream, line);
+				if (line.length() > 0) {
+					file_set_changed = true;
+				}
+			}
 		}
 		file_list_istream.close();
 
@@ -273,13 +279,12 @@ bool compile_rough_lexer(std::vector<fs::path> const &split_files,
 			 * this timestamp check and the system-call to cmake and the
 			 * build command might be too costly for every trtok startup,
 			 * so we check the filestamps by hand first. */
+			bool newer_filestamps = false;
 			std::time_t compiled_time = fs::last_write_time(file_list_path);
-
-			std::cout << "File set hasn't been changed.";
 
 			typedef std::vector<fs::path>::const_iterator iter;
 			iter i = split_files.begin();
-			while (!files_changed && (i != end_files.end())) {
+			while (!newer_filestamps && (i != end_files.end())) {
 				if (i == split_files.end())
 					i = join_files.begin();
 				else if (i == join_files.end())
@@ -287,9 +292,13 @@ bool compile_rough_lexer(std::vector<fs::path> const &split_files,
 				else if (i == begin_files.end())
 					i = end_files.begin();
 				if (fs::last_write_time(*i) >= compiled_time) {
-					files_changed = true;
+					newer_filestamps = true;
 				}
 				i++;
+			}
+
+			if (!newer_filestamps) {
+				files_changed = false;
 			}
 		}
 	}
