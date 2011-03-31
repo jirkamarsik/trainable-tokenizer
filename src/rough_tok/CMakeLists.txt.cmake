@@ -60,5 +60,6 @@ add_definitions (--std=c++0x)
 
 set (SRCS $ENV{TRTOK_PATH}/code/rough_tok_wrapper.cpp RoughLexer.cpp)
 add_library (roughtok MODULE ${SRCS})
+set_target_properties(roughtok PROPERTIES PREFIX "" SUFFIX "")
 
 target_link_libraries (roughtok ${LIBS})

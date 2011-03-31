@@ -14,7 +14,7 @@
 
 class RoughLexerWrapper : public IRoughLexerWrapper {
 public:
-	RoughLexerWrapper(): lexer_p(0x0), token_p(0x0) {
+	RoughLexerWrapper(): m_lexer_p(0x0), m_token_p(0x0) {
 		type_id_table[QUEX_ROUGH_TOKEN_PIECE - TOKEN_ID_OFFSET] = TOKEN_PIECE;
 		type_id_table[QUEX_ROUGH_MAY_BREAK_SENTENCE - TOKEN_ID_OFFSET] = MAY_BREAK_SENTENCE;
 		type_id_table[QUEX_ROUGH_MAY_SPLIT - TOKEN_ID_OFFSET] = MAY_SPLIT;
@@ -25,29 +25,40 @@ public:
 	}
 
 	virtual void setup(std::istream *in, char const *encoding) {
-		delete lexer_p;
-		lexer_p = new quex::RoughLexer(in, encoding);
-		token_p = 0x0;
+		m_in = in;
+		m_encoding = encoding;
+		if (m_lexer_p == 0x0)
+			m_lexer_p = new quex::RoughLexer(m_in, m_encoding);
+		else
+			m_lexer_p->reset(m_in, m_encoding);
+		m_token_p = 0x0;
+	}
+
+	virtual void reset() {
+		m_lexer_p->reset(m_in, m_encoding);
 	}
 
 	virtual rough_token_t receive() {
-		lexer_p->receive(&token_p);
+		m_lexer_p->receive(&m_token_p);
 		rough_token_t out_token;
-		if (token_p->type_id() == QUEX_ROUGH_TERMINATION)
+		if (m_token_p->type_id() == QUEX_ROUGH_TERMINATION)
 			out_token.type_id = TERMINATION;
 		else
-			out_token.type_id = type_id_table[token_p->type_id() - TOKEN_ID_OFFSET];
-		out_token.text = token_p->pretty_char_text();
+			out_token.type_id = type_id_table[m_token_p->type_id() - TOKEN_ID_OFFSET];
+		if (out_token.type_id == TOKEN_PIECE)
+			out_token.text = m_token_p->pretty_char_text();
 		return out_token;
 	}
 private:
-	quex::RoughLexer *lexer_p;
-	quex::Token *token_p;
+	quex::RoughLexer *m_lexer_p;
+	quex::Token *m_token_p;
+	std::istream *m_in;
+	char const *m_encoding;
 	rough_token_id type_id_table[7];
 };
 
 /* A factory function which we will retrieve by way of dlopen() and family
  * and use it to construct an instance of the wrapper class. */
-IRoughLexerWrapper* make_quex_wrapper() {
+extern "C" IRoughLexerWrapper* make_quex_wrapper() {
 	return new RoughLexerWrapper();
 }

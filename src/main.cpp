@@ -7,12 +7,14 @@
 #include <boost/filesystem.hpp>
 #include <boost/unordered_map.hpp>
 #include <tbb/concurrent_queue.h>
+#include <ltdl.h>
 
 #include "configuration.hpp"
 #include "text_cleaner.hpp"
 #include "cutout_t.hpp"
 #include "rough_tok_compile.hpp"
 #include "config_exception.hpp"
+#include "rough_tok/rough_tok_wrapper.hpp"
 
 using namespace std;
 using namespace trtok;
@@ -223,23 +225,71 @@ int main(int argc, char const **argv) {
 		return 1;
 	}
 
-	// Debugging code
-	for_each(split_files.begin(), split_files.end(), print_path);
-	for_each(join_files.begin(), join_files.end(), print_path);
-	for_each(begin_files.begin(), begin_files.end(), print_path);
-	for_each(end_files.begin(), end_files.end(), print_path);
-	return 0;
+	int return_code = lt_dlinit();
+	if (return_code != 0) {
+		std::cerr << "Error: lt_dlinit returned " << return_code << "." << std::endl;
+		return 1;
+	}
+	
+	fs::path roughtok_wrapper_path = build_path / fs::path("roughtok");
+	lt_dlhandle libroughtok = lt_dlopen(roughtok_wrapper_path.c_str());
+	if (libroughtok == NULL) {
+		std::cerr << "Error: Cannot load the compiled rough tokenizer.\n"
+			     "       Oh no! Something bad must have happened in the build system...\n"
+			     "Why? : " << lt_dlerror() << std::endl;
+		return 1;
+	}
+
+	void *factory_func_void_p = lt_dlsym(libroughtok, "make_quex_wrapper");
+	if (factory_func_void_p == NULL) {
+		std::cerr << "Error: No extern make_quex_wrapper in the wrapper!\n"
+			     "Why? : " <<  lt_dlerror() << std::endl;
+		return 1;
+	}
+	typedef IRoughLexerWrapper* (*factory_func_t)(void);
+	factory_func_t factory_func_p = (factory_func_t)factory_func_void_p;
+	IRoughLexerWrapper *rough_lexer_wrapper = factory_func_p();
 
 
 	// Testing code
+	stringstream ss;
 	tbb::concurrent_queue<cutout_t> cutout_queue;
-
-	TextCleaner cleaner(&cout, s_encoding, o_hide_xml, o_expand_entities, o_keep_entities_expanded, &cutout_queue);
-	cleaner.setup(&cin);
+	TextCleaner cleaner(&ss, s_encoding, o_hide_xml, o_expand_entities, o_keep_entities_expanded, &cutout_queue);
+	cleaner.setup(&std::cin);
 	cleaner.do_work();
 
-	typedef tbb::concurrent_queue<cutout_t>::const_iterator iter;
-	for (iter i = cutout_queue.unsafe_begin(); i != cutout_queue.unsafe_end(); i++) {
-		cout << (i->kind == ENTITY ? "ENTITY" : "XML") << " " << i->position << " " << i->text << endl;
-	}
+	rough_lexer_wrapper->setup(&ss, "UTF-8");
+	rough_token_t token;
+	do {
+		token = rough_lexer_wrapper->receive();
+		switch (token.type_id) {
+			case TOKEN_PIECE:
+				std::cout << token.text;
+				break;
+			case MAY_SPLIT:
+				std::cout << "MAY_SPLIT";
+				break;
+			case MAY_JOIN:
+				std::cout << "MAY_JOIN";
+				break;
+			case MAY_BREAK_SENTENCE:
+				std::cout << "MAY_BREAK_SENTENCE";
+				break;
+			case WHITESPACE:
+				std::cout << "WHITESPACE";
+				break;
+			case LINE_BREAK:
+				std::cout << "LINE_BREAK";
+				break;
+			case PARAGRAPH_BREAK:
+				std::cout << "PARAGRAPH_BREAK";
+				break;
+			case TERMINATION:
+				std::cout << "TERMINATION";
+				break;
+		}
+		std::cout << std::endl;
+	} while (token.type_id != TERMINATION);
+
+	lt_dlexit();
 }
