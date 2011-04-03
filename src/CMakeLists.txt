@@ -21,7 +21,13 @@ set (LIBS ${LIBS} ${MaxEnt_LIBRARIES})
 find_package (TBB REQUIRED)
 include_directories (${TBB_INCLUDE_DIRS})
 link_directories (${TBB_LIBRARY_DIRS})
-set (LIBS ${LIBS} ${TBB_LIBRARIES})
+link_directories (${TBB_DEBUG_LIBRARY_DIRS})
+foreach (LIBRARY IN LISTS TBB_LIBRARIES)
+  set (LIBS ${LIBS} optimized ${LIBRARY})
+endforeach (LIBRARY)
+foreach (LIBRARY IN LISTS TBB_DEBUG_LIBRARIES)
+  set (LIBS ${LIBS} debug ${LIBRARY})
+endforeach (LIBRARY)
 
 find_package (LIBICONV)
 find_package (ICU)
@@ -59,6 +65,7 @@ link_directories (${LTDL_LIBRARY_DIRS})
 set (LIBS ${LIBS} ${LTDL_LIBRARIES})
 
 set (CHUNK_SIZE 100 CACHE STRING "Number of rough tokens constituting a work unit in the pipeline.")
+set (WORK_UNIT_COUNT 1 CACHE STRING "The number of token chunks flowing through the pipeline.")
 set (ACCUMULATOR_CAPACITY 256 CACHE STRING "Maximum size of Quex's accumulator in the TextCleaner stage.")
 set (QUEX_TOKEN_ID_OFFSET 10000)
 
@@ -125,8 +132,8 @@ include_directories (${CMAKE_CURRENT_SOURCE_DIR}
 		     ${CMAKE_CURRENT_BINARY_DIR}/quex_files
 		     $ENV{QUEX_PATH})
 
-set (SRCS main.cpp text_cleaner.cpp ${QUEX_ENTITY}.cpp ${QUEX_XML}.cpp
-	  rough_tok_compile.cpp utils.cpp)
+set (SRCS main.cpp TextCleaner.cpp ${QUEX_ENTITY}.cpp ${QUEX_XML}.cpp
+	rough_tok_compile.cpp RoughTokenizer.cpp utils.cpp)
 add_executable (trtok ${SRCS})
 
 target_link_libraries (trtok ${LIBS})

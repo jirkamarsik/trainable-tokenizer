@@ -2,6 +2,29 @@
 # TBB can be found at http://www.threadingbuildingblocks.org/ 
 # Written by Hannes Hofmann, hannes.hofmann _at_ informatik.uni-erlangen.de
 # Adapted by Gino van den Bergen gino _at_ dtecta.com
+# Modified by Jiri Marsik, jiri.marsik89 _at_ gmail.com
+
+# The MIT License
+#
+# Copyright (c) 2011 Hannes Hofmann
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+# THE SOFTWARE.
 
 # GvdB: This module uses the environment variable TBB_ARCH_PLATFORM which defines architecture and compiler.
 #   e.g. "ia32/vc8" or "em64t/cc4.1.0_libc2.4_kernel2.6.16.21"
@@ -20,6 +43,7 @@
 # This module defines
 # TBB_INCLUDE_DIRS, where to find task_scheduler_init.h, etc.
 # TBB_LIBRARY_DIRS, where to find libtbb, libtbbmalloc
+# TBB_DEBUG_LIBRARY_DIRS, where to find libtbb_debug, libtbbmalloc_debug
 # TBB_INSTALL_DIR, the base TBB install directory
 # TBB_LIBRARIES, the libraries to link against to use TBB.
 # TBB_DEBUG_LIBRARIES, the libraries to link against to use TBB with debug symbols.
@@ -43,12 +67,11 @@ if (WIN32)
     if (MSVC90)
         set(_TBB_COMPILER "vc9")
     endif(MSVC90)
-    if (MSVC10)
+    # My change: TBB now definitely supports MSVC10.
+    if(MSVC10)
 	set(_TBB_COMPILER "vc10")
-    endif (MSVC10)
-    if (NOT _TBB_COMPILER)
-        message("ERROR: TBB supports only VC 7.1, 8, 9 and 10 compilers on Windows platforms.")
-    endif (NOT _TBB_COMPILER)
+    endif(MSVC10)
+    # My change: I believe TBB supports other Windows compilers such as ICL.
     set(_TBB_ARCHITECTURE ${TBB_ARCHITECTURE})
 endif (WIN32)
 
@@ -62,8 +85,18 @@ if (UNIX)
         set(_TBB_LIB_DEBUG_NAME "${_TBB_LIB_NAME}_debug")
         set(_TBB_LIB_MALLOC_DEBUG_NAME "${_TBB_LIB_MALLOC_NAME}_debug")
         # has only one flavor: ia32/cc4.0.1_os10.4.9
-        set(_TBB_COMPILER "cc4.0.1_os10.4.9")
-        set(_TBB_ARCHITECTURE "ia32")
+	# My change: There is no need to presume there is only one flavour and
+	#            that user's setting of variables should be ignored.
+	if(NOT TBB_COMPILER)
+        	set(_TBB_COMPILER "cc4.0.1_os10.4.9")
+	elseif (NOT TBB_COMPILER)
+		set(_TBB_COMPILER ${TBB_COMPILER})
+	endif(NOT TBB_COMPILER)
+	if(NOT TBB_ARCHITECTURE)
+        	set(_TBB_ARCHITECTURE "ia32")
+	elseif(NOT TBB_ARCHITECTURE)
+		set(_TBB_ARCHITECTURE ${TBB_ARCHITECTURE})
+	endif(NOT TBB_ARCHITECTURE)
     else (APPLE)
         # LINUX
         set(_TBB_DEFAULT_INSTALL_DIR "/opt/intel/tbb" "/usr/local/include" "/usr/include")
@@ -115,7 +148,8 @@ endif (NOT _TBB_INSTALL_DIR)
 # third: try to find path automatically
 if (NOT _TBB_INSTALL_DIR)
     if (_TBB_DEFAULT_INSTALL_DIR)
-        set (_TBB_INSTALL_DIR $ENV{_TBB_DEFAULT_INSTALL_DIR})
+	# My change: Probably wanted to use the CMake variable and not the environment variable
+        set (_TBB_INSTALL_DIR _TBB_DEFAULT_INSTALL_DIR)
     endif (_TBB_DEFAULT_INSTALL_DIR)
 endif (NOT _TBB_INSTALL_DIR)
 # sanity check
@@ -147,7 +181,9 @@ endmacro(TBB_CORRECT_LIB_DIR var_content)
 set (TBB_INC_SEARCH_DIR ${_TBB_INSTALL_DIR}/include)
 find_path(TBB_INCLUDE_DIR
     tbb/task_scheduler_init.h
-    PATHS ${TBB_INC_SEARCH_DIR}
+    # My change: tbbvars now sets the CPATH environment variable to the directory
+    #            containing the headers.
+    PATHS ${TBB_INC_SEARCH_DIR} ENV CPATH
 )
 mark_as_advanced(TBB_INCLUDE_DIR)
 
@@ -159,18 +195,36 @@ if (NOT $ENV{TBB_ARCH_PLATFORM} STREQUAL "")
          ${_TBB_INSTALL_DIR}/lib/$ENV{TBB_ARCH_PLATFORM}
          ${_TBB_INSTALL_DIR}/$ENV{TBB_ARCH_PLATFORM}/lib
         )
-elseif ((NOT ${TBB_ARCHITECTURE} STREQUAL "") AND (NOT ${TBB_COMPILER}))
-    # HH: deprecated
-    message(STATUS "[Warning] FindTBB.cmake: The use of TBB_ARCHITECTURE and TBB_COMPILER is deprecated and may not be supported in future versions. Please set $ENV{TBB_ARCH_PLATFORM} (using tbbvars.[bat|csh|sh]).")
-    set (_TBB_LIBRARY_DIR "${_TBB_INSTALL_DIR}/${_TBB_ARCHITECTURE}/${_TBB_COMPILER}/lib")
+# My change: This block isn't mutually exclusive with the previous one
+#            (hence no else), instead I test if the user really specified
+#            the variables in question.
 endif (NOT $ENV{TBB_ARCH_PLATFORM} STREQUAL "")
+if ((NOT ${TBB_ARCHITECTURE} STREQUAL "") AND (NOT ${TBB_COMPILER} STREQUAL ""))
+    # HH: deprecated
+    # My change: Escaped the dollar sign to prevent variable expansion
+    message(STATUS "[Warning] FindTBB.cmake: The use of TBB_ARCHITECTURE and TBB_COMPILER is deprecated and may not be supported in future versions. Please set \$ENV{TBB_ARCH_PLATFORM} (using tbbvars.[bat|csh|sh]).")
+    # My change: It doesn't hurt to look in more places, so I store the hints
+    #            from ENV{TBB_ARCH_PLATFORM} and the TBB_ARCHITECTURE
+    #            and TBB_COMPILER variables and search them both.
+    set (_TBB_LIBRARY_DIR "${_TBB_INSTALL_DIR}/${_TBB_ARCHITECTURE}/${_TBB_COMPILER}/lib" ${_TBB_LIBRARY_DIR})
+endif ((NOT ${TBB_ARCHITECTURE} STREQUAL "") AND (NOT ${TBB_COMPILER} STREQUAL ""))
 
 # GvdB: Mac OS X distribution places libraries directly in lib directory.
 list(APPEND _TBB_LIBRARY_DIR ${_TBB_INSTALL_DIR}/lib)
 
-
-find_library(TBB_LIBRARY        ${_TBB_LIB_NAME}        ${_TBB_LIBRARY_DIR})
-find_library(TBB_MALLOC_LIBRARY ${_TBB_LIB_MALLOC_NAME} ${_TBB_LIBRARY_DIR})
+# My change: No reason not to check the default paths. From recent versions,
+#            tbbvars has started exporting the LIBRARY_PATH and LD_LIBRARY_PATH
+#            variables, which now point to the directories of the lib files.
+#            It all makes more sense to use the ${_TBB_LIBRARY_DIR} as a HINTS
+#            argument instead of the implicit PATHS as it isn't hard-coded
+#            but computed by system introspection. Searching the LIBRARY_PATH
+#            and LD_LIBRARY_PATH environment variables is now even more important
+#            that tbbvars don't export TBB_ARCH_PLATFORM and it facilitates
+#            the use of TBB built from sources.
+find_library(TBB_LIBRARY        ${_TBB_LIB_NAME}        HINTS ${_TBB_LIBRARY_DIR}
+		PATHS ENV LIBRARY_PATH ENV LD_LIBRARY_PATH)
+find_library(TBB_MALLOC_LIBRARY ${_TBB_LIB_MALLOC_NAME} HINTS ${_TBB_LIBRARY_DIR}
+		PATHS ENV LIBRARY_PATH ENV LD_LIBRARY_PATH)
 
 #Extract path from TBB_LIBRARY name
 get_filename_component(TBB_LIBRARY_DIR ${TBB_LIBRARY} PATH)
@@ -180,8 +234,16 @@ get_filename_component(TBB_LIBRARY_DIR ${TBB_LIBRARY} PATH)
 mark_as_advanced(TBB_LIBRARY TBB_MALLOC_LIBRARY)
 
 #-- Look for debug libraries
-find_library(TBB_LIBRARY_DEBUG        ${_TBB_LIB_DEBUG_NAME}        ${_TBB_LIBRARY_DIR})
-find_library(TBB_MALLOC_LIBRARY_DEBUG ${_TBB_LIB_MALLOC_DEBUG_NAME} ${_TBB_LIBRARY_DIR})
+# My change: Changed the same way as for the release libraries.
+find_library(TBB_LIBRARY_DEBUG        ${_TBB_LIB_DEBUG_NAME}        HINTS ${_TBB_LIBRARY_DIR}
+		PATHS ENV LIBRARY_PATH ENV LD_LIBRARY_PATH)
+find_library(TBB_MALLOC_LIBRARY_DEBUG ${_TBB_LIB_MALLOC_DEBUG_NAME} HINTS ${_TBB_LIBRARY_DIR}
+		PATHS ENV LIBRARY_PATH ENV LD_LIBRARY_PATH)
+
+# My change: Self-built TBB stores the debug libraries in a separate directory.
+#Extract path from TBB_LIBRARY_DEBUG name
+get_filename_component(TBB_LIBRARY_DEBUG_DIR ${TBB_LIBRARY_DEBUG} PATH)
+
 #TBB_CORRECT_LIB_DIR(TBB_LIBRARY_DEBUG)
 #TBB_CORRECT_LIB_DIR(TBB_MALLOC_LIBRARY_DEBUG)
 mark_as_advanced(TBB_LIBRARY_DEBUG TBB_MALLOC_LIBRARY_DEBUG)
@@ -193,8 +255,10 @@ if (TBB_INCLUDE_DIR)
         set (TBB_LIBRARIES ${TBB_LIBRARY} ${TBB_MALLOC_LIBRARY} ${TBB_LIBRARIES})
         set (TBB_DEBUG_LIBRARIES ${TBB_LIBRARY_DEBUG} ${TBB_MALLOC_LIBRARY_DEBUG} ${TBB_DEBUG_LIBRARIES})
         set (TBB_INCLUDE_DIRS ${TBB_INCLUDE_DIR} CACHE PATH "TBB include directory" FORCE)
-        set (TBB_LIBRARY_DIRS ${TBB_LIBRARY_DIR} CACHE PATH "TBB library directory" FORCE)
-        mark_as_advanced(TBB_INCLUDE_DIRS TBB_LIBRARY_DIRS TBB_LIBRARIES TBB_DEBUG_LIBRARIES)
+        set (TBB_LIBRARY_DIRS ${TBB_LIBRARY_DIR}  CACHE PATH "TBB library directory" FORCE)
+	# My change: Self-built TBB stores the debug libraries in a separate directory.
+	set (TBB_DEBUG_LIBRARY_DIRS ${TBB_LIBRARY_DEBUG_DIR} CACHE PATH "TBB debug library directory" FORCE)
+	mark_as_advanced(TBB_INCLUDE_DIRS TBB_LIBRARY_DIRS TBB_DEBUG_LIBRARY_DIRS TBB_LIBRARIES TBB_DEBUG_LIBRARIES)
         message(STATUS "Found Intel TBB")
     endif (TBB_LIBRARY)
 endif (TBB_INCLUDE_DIR)
