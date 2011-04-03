@@ -6,15 +6,18 @@
 #include <boost/program_options.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/unordered_map.hpp>
+#include <tbb/task_scheduler_init.h>
+#include <tbb/pipeline.h>
 #include <tbb/concurrent_queue.h>
 #include <ltdl.h>
 
 #include "configuration.hpp"
-#include "text_cleaner.hpp"
+#include "config_exception.hpp"
+#include "TextCleaner.hpp"
 #include "cutout_t.hpp"
 #include "rough_tok_compile.hpp"
-#include "config_exception.hpp"
-#include "rough_tok/rough_tok_wrapper.hpp"
+#include "RoughTokenizer.hpp"
+#include "token_t.hpp"
 
 using namespace std;
 using namespace trtok;
@@ -258,38 +261,25 @@ int main(int argc, char const **argv) {
 	cleaner.setup(&std::cin);
 	cleaner.do_work();
 
-	rough_lexer_wrapper->setup(&ss, "UTF-8");
-	rough_token_t token;
-	do {
-		token = rough_lexer_wrapper->receive();
-		switch (token.type_id) {
-			case TOKEN_PIECE:
-				std::cout << token.text;
-				break;
-			case MAY_SPLIT:
-				std::cout << "MAY_SPLIT";
-				break;
-			case MAY_JOIN:
-				std::cout << "MAY_JOIN";
-				break;
-			case MAY_BREAK_SENTENCE:
-				std::cout << "MAY_BREAK_SENTENCE";
-				break;
-			case WHITESPACE:
-				std::cout << "WHITESPACE";
-				break;
-			case LINE_BREAK:
-				std::cout << "LINE_BREAK";
-				break;
-			case PARAGRAPH_BREAK:
-				std::cout << "PARAGRAPH_BREAK";
-				break;
-			case TERMINATION:
-				std::cout << "TERMINATION";
-				break;
+	RoughTokenizer rough_tok(rough_lexer_wrapper);
+	rough_tok.setup(&ss, "UTF-8");
+
+	struct chunk_printer_t: public tbb::filter {
+		chunk_printer_t(): filter(tbb::filter::serial_in_order) {}
+		virtual void* operator()(void *input_p) {
+			chunk_t *chunk_p = (chunk_t*)input_p;
+			for (std::vector<token_t>::const_iterator i = chunk_p->tokens.begin();
+			     i != chunk_p->tokens.end(); i++) {
+				std::cout << i->text << " " << i->n_newlines << " " << i->decision_flags << std::endl;
+			}
+			return NULL;
 		}
-		std::cout << std::endl;
-	} while (token.type_id != TERMINATION);
+	} chunk_printer;
+
+	tbb::pipeline my_pipeline;
+	my_pipeline.add_filter(rough_tok);
+	my_pipeline.add_filter(chunk_printer);
+	my_pipeline.run(WORK_UNIT_COUNT);
 
 	lt_dlexit();
 }
