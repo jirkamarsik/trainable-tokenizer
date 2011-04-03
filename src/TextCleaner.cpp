@@ -4,7 +4,7 @@
 #include <boost/cstdint.hpp>
 typedef boost::uint32_t uint32_t;
 
-#include "text_cleaner.hpp"
+#include "TextCleaner.hpp"
 #include "trtok_clean_entities_EntityCleaner"
 #include "trtok_clean_xml_XmlCleaner"
 #include "cutout_t.hpp"

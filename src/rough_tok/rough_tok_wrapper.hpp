@@ -8,14 +8,14 @@
  * on Quex's native token type ids and makes the application more robust
  * and more easily modified. */
 enum rough_token_id {
-	TERMINATION,
-	TOKEN_PIECE,
-	MAY_BREAK_SENTENCE,
-	MAY_SPLIT,
-	MAY_JOIN,
-	WHITESPACE,
-	LINE_BREAK,
-	PARAGRAPH_BREAK
+	TERMINATION_ID,
+	TOKEN_PIECE_ID,
+	MAY_BREAK_SENTENCE_ID,
+	MAY_SPLIT_ID,
+	MAY_JOIN_ID,
+	WHITESPACE_ID,
+	LINE_BREAK_ID,
+	PARAGRAPH_BREAK_ID
 };
 
 /* My stripped down version of a rough token as reported by Quex. I use my
