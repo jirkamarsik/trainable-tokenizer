@@ -6,10 +6,15 @@
 #include <boost/program_options.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/unordered_map.hpp>
-#include <tbb/task_scheduler_init.h>
-#include <tbb/pipeline.h>
-#include <tbb/concurrent_queue.h>
+#include <boost/ref.hpp>
+#include <boost/thread.hpp>
+#include "tbb/pipeline.h"
+#include "tbb/concurrent_queue.h"
+#include "tbb/tbb_exception.h"
+#include "tbb/tick_count.h"
 #include <ltdl.h>
+
+#include "pipes/pipe.hpp"
 
 #include "configuration.hpp"
 #include "config_exception.hpp"
@@ -255,17 +260,19 @@ int main(int argc, char const **argv) {
 
 
 	// Testing code
-	stringstream ss;
+	pipes::pipe my_pipe(pipes::pipe::limited_capacity);
+	pipes::opipestream my_pipe_to(my_pipe);
+	pipes::ipipestream my_pipe_from(my_pipe);
+
 	tbb::concurrent_queue<cutout_t> cutout_queue;
-	TextCleaner cleaner(&ss, s_encoding, o_hide_xml, o_expand_entities, o_keep_entities_expanded, &cutout_queue);
+	TextCleaner cleaner(&my_pipe_to, s_encoding, o_hide_xml, o_expand_entities, o_keep_entities_expanded, &cutout_queue);
 	cleaner.setup(&std::cin);
-	cleaner.do_work();
 
 	RoughTokenizer rough_tok(rough_lexer_wrapper);
-	rough_tok.setup(&ss, "UTF-8");
+	rough_tok.setup(&my_pipe_from, "UTF-8");
 
 	struct chunk_printer_t: public tbb::filter {
-		chunk_printer_t(): filter(tbb::filter::serial_in_order) {}
+		chunk_printer_t(): tbb::filter(tbb::filter::serial_in_order) {}
 		virtual void* operator()(void *input_p) {
 			chunk_t *chunk_p = (chunk_t*)input_p;
 			for (std::vector<token_t>::const_iterator i = chunk_p->tokens.begin();
@@ -279,7 +286,20 @@ int main(int argc, char const **argv) {
 	tbb::pipeline my_pipeline;
 	my_pipeline.add_filter(rough_tok);
 	my_pipeline.add_filter(chunk_printer);
-	my_pipeline.run(WORK_UNIT_COUNT);
+
+	tbb::tick_count t0 = tbb::tick_count::now();
+	try {
+		boost::thread input_thread(&TextCleaner::do_work, boost::ref(cleaner));
+		my_pipeline.run(WORK_UNIT_COUNT);
+		input_thread.join();
+	} catch (tbb::captured_exception const &exc) {
+		std::cerr << "Start of bug" << std::endl;
+		std::cerr << "Name: " << exc.name() << std::endl;
+		std::cerr << "What: " << exc.what() << std::endl;
+		std::cerr << "End of bug" << std::endl;
+	}
+	tbb::tick_count t1 = tbb::tick_count::now();
+	std::cout << (t1 - t0).seconds() << "s" << std::endl;
 
 	lt_dlexit();
 }

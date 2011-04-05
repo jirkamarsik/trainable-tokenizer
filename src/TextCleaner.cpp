@@ -100,6 +100,7 @@ void TextCleaner::do_work()
 	} else {
 		TEXTCLEANER(clean_xml, XmlCleaner, QUEX_PREPROC_WITHXML_);
 	}
+	m_output_stream_p->close();
 }
 
 void TextCleaner::prepare_entity_map()

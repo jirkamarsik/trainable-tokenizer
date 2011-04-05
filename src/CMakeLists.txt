@@ -85,6 +85,9 @@ configure_file (${CMAKE_CURRENT_SOURCE_DIR}/rough_tok/rough_tok_wrapper.cpp.cmak
 configure_file (${CMAKE_CURRENT_SOURCE_DIR}/rough_tok/rough_tok_wrapper.hpp
 		${CMAKE_CURRENT_BINARY_DIR}/code/rough_tok_wrapper.hpp COPYONLY)
 
+configure_file (${CMAKE_CURRENT_SOURCE_DIR}/rough_tok/no_init_exception.hpp
+		${CMAKE_CURRENT_BINARY_DIR}/code/no_init_exception.hpp COPYONLY)
+
 configure_file (${CMAKE_CURRENT_SOURCE_DIR}/CMake/FindICU.cmake
 		${CMAKE_CURRENT_BINARY_DIR}/code/FindICU.cmake COPYONLY)
 

@@ -8,6 +8,8 @@
 #include <boost/cstdint.hpp>
 typedef boost::uint32_t uint32_t;
 
+#include "pipes/pipe.hpp"
+
 #include "cutout_t.hpp"
 
 namespace trtok {
@@ -20,7 +22,7 @@ namespace trtok {
 class TextCleaner
 {
 public:
-	TextCleaner(std::ostream *output_stream_p, std::string const &input_encoding,
+	TextCleaner(pipes::opipestream *output_stream_p, std::string const &input_encoding,
 		    bool hide_xml, bool expand_entities, bool keep_entities_expanded = false,
 		    tbb::concurrent_queue<cutout_t> *cutout_queue_p = 0x0):
 		m_output_stream_p(output_stream_p), m_input_encoding(input_encoding),
@@ -43,7 +45,7 @@ private:
 	bool expand_entity(std::string const &entity, std::string &expanded_str);
 
 	std::istream *m_input_stream_p;
-	std::ostream *m_output_stream_p;
+	pipes::opipestream *m_output_stream_p;
 	std::string m_input_encoding;
 	bool m_expand_entities, m_keep_entities_expanded, m_hide_xml;
 	tbb::concurrent_queue<cutout_t> *m_cutout_queue_p;
