@@ -46,7 +46,8 @@ public:
 			m_do_reset = false;
 		}
 		else if (m_do_reset) {
-			m_lexer_p->reset(m_in_p, m_encoding);
+			delete m_lexer_p;
+			m_lexer_p = new quex::RoughLexer(m_in_p, m_encoding);
 			m_token_p = 0x0;
 			m_do_reset = false;
 		}

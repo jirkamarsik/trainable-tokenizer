@@ -240,6 +240,7 @@ bool compile_rough_lexer(std::vector<fs::path> const &split_files,
 			 std::vector<fs::path> const &end_files,
 			 fs::path const &build_path)
 {
+	fs::path original_path = fs::current_path();
 	fs::current_path(build_path);
 	
 	bool files_changed = true;
@@ -468,29 +469,35 @@ bool compile_rough_lexer(std::vector<fs::path> const &split_files,
 			throw config_exception("Error: The build system exited with an error code when compiling the rough tokenizer.");
 		}
 
-		// And finally we write the list of files that defined this lexer
-		// and "stamp" them with the current time.
-		fs::ofstream file_list_ostream(file_list_path);
-
-		typedef std::vector<fs::path>::const_iterator iter;
-		for (iter i = split_files.begin(); i != split_files.end(); i++) {
-			file_list_ostream << i->generic_string() << std::endl;
+		fs::path compiled_wrapper_path = build_path / fs::path("roughtok");
+		if (fs::exists(compiled_wrapper_path) && ((!fs::exists(file_list_path) ||
+				(fs::last_write_time(compiled_wrapper_path) > fs::last_write_time(file_list_path))))) {
+			// And finally we write the list of files that defined this lexer
+			// and "stamp" them with the current time. (but only if we compiled successfully)
+			fs::ofstream file_list_ostream(file_list_path);
+	
+			typedef std::vector<fs::path>::const_iterator iter;
+			for (iter i = split_files.begin(); i != split_files.end(); i++) {
+				file_list_ostream << i->generic_string() << std::endl;
+			}
+	
+			for (iter i = join_files.begin(); i != join_files.end(); i++) {
+				file_list_ostream << i->generic_string() << std::endl;
+			}
+	
+			for (iter i = begin_files.begin(); i != begin_files.end(); i++) {
+				file_list_ostream << i->generic_string() << std::endl;
+			}
+	
+			for (iter i = end_files.begin(); i != end_files.end(); i++) {
+				file_list_ostream << i->generic_string() << std::endl;
+			}
+	
+			file_list_ostream.close();
 		}
-
-		for (iter i = join_files.begin(); i != join_files.end(); i++) {
-			file_list_ostream << i->generic_string() << std::endl;
-		}
-
-		for (iter i = begin_files.begin(); i != begin_files.end(); i++) {
-			file_list_ostream << i->generic_string() << std::endl;
-		}
-
-		for (iter i = end_files.begin(); i != end_files.end(); i++) {
-			file_list_ostream << i->generic_string() << std::endl;
-		}
-
-		file_list_ostream.close();
 	}
+
+	fs::current_path(original_path);
 }
 
 }

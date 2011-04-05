@@ -14,10 +14,12 @@ public:
 
 	void setup(std::istream* in_p, char const *encoding) {
 		m_wrapper_p->setup(in_p, encoding);
+		m_hit_end = false;
 	}
 
 	void reset() {
 		m_wrapper_p->reset();
+		m_hit_end = false;
 	}
 
 	virtual void* operator()(void*);

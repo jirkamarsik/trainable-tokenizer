@@ -14,6 +14,8 @@
 #include "tbb/tick_count.h"
 #include <ltdl.h>
 
+#include <fstream>
+
 #include "pipes/pipe.hpp"
 
 #include "configuration.hpp"
@@ -260,13 +262,14 @@ int main(int argc, char const **argv) {
 
 
 	// Testing code
+	ifstream fs1("csSample.txt"), fs2("enSample.txt");
 	pipes::pipe my_pipe(pipes::pipe::limited_capacity);
 	pipes::opipestream my_pipe_to(my_pipe);
 	pipes::ipipestream my_pipe_from(my_pipe);
 
 	tbb::concurrent_queue<cutout_t> cutout_queue;
 	TextCleaner cleaner(&my_pipe_to, s_encoding, o_hide_xml, o_expand_entities, o_keep_entities_expanded, &cutout_queue);
-	cleaner.setup(&std::cin);
+	cleaner.setup(&fs1);
 
 	RoughTokenizer rough_tok(rough_lexer_wrapper);
 	rough_tok.setup(&my_pipe_from, "UTF-8");
@@ -290,6 +293,16 @@ int main(int argc, char const **argv) {
 	tbb::tick_count t0 = tbb::tick_count::now();
 	try {
 		boost::thread input_thread(&TextCleaner::do_work, boost::ref(cleaner));
+		my_pipeline.run(WORK_UNIT_COUNT);
+		input_thread.join();
+		
+		my_pipe_from.close();
+		my_pipe_from.open(my_pipe);
+		my_pipe_to.open(my_pipe);
+
+		cleaner.setup(&fs2);
+		rough_tok.reset();
+		input_thread = boost::thread(&TextCleaner::do_work, boost::ref(cleaner));
 		my_pipeline.run(WORK_UNIT_COUNT);
 		input_thread.join();
 	} catch (tbb::captured_exception const &exc) {
