@@ -1,3 +1,6 @@
+#ifndef PIPE_INCLUDE_GUARD
+#define PIPE_INCLUDE_GUARD
+
 // Copyright (C) Alexander Nasonov, 2003. Permission to copy, use, modify,
 // sell and distribute this software is granted provided this copyright notice
 // appears in all copies. This software is provided "as is" without express or
@@ -424,3 +427,4 @@ typedef basic_opipestream<char> opipestream;
 
 } // namespace pipes
 
+#endif
