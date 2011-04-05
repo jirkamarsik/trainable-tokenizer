@@ -4,6 +4,8 @@
 #include <string>
 #include <istream>
 
+namespace trtok {
+
 /* My own coding of the rough lexer token types. This removes a dependency
  * on Quex's native token type ids and makes the application more robust
  * and more easily modified. */
@@ -43,5 +45,7 @@ public:
 	// after sending the first token with type_id == TERMINATION.
 	virtual rough_token_t receive() = 0;
 };
+
+}
 
 #endif

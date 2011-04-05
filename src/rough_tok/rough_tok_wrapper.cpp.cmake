@@ -3,6 +3,7 @@
 #include "RoughLexer"
 
 #include "rough_tok_wrapper.hpp"
+#include "no_init_exception.hpp"
 
 
 // Quex adds a value to all user-defined token types. We want to translate
@@ -12,9 +13,11 @@
 // won't be sabotaged by changes in the implementation of Quex.
 #define TOKEN_ID_OFFSET @QUEX_TOKEN_ID_OFFSET@
 
+namespace trtok {
+
 class RoughLexerWrapper : public IRoughLexerWrapper {
 public:
-	RoughLexerWrapper(): m_lexer_p(0x0), m_token_p(0x0) {
+	RoughLexerWrapper(): m_lexer_p(0x0), m_token_p(0x0), m_in_p(0x0), m_do_reset(false) {
 		type_id_table[QUEX_ROUGH_TOKEN_PIECE - TOKEN_ID_OFFSET] = TOKEN_PIECE_ID;
 		type_id_table[QUEX_ROUGH_MAY_BREAK_SENTENCE - TOKEN_ID_OFFSET] = MAY_BREAK_SENTENCE_ID;
 		type_id_table[QUEX_ROUGH_MAY_SPLIT - TOKEN_ID_OFFSET] = MAY_SPLIT_ID;
@@ -24,21 +27,30 @@ public:
 		type_id_table[QUEX_ROUGH_PARAGRAPH_BREAK - TOKEN_ID_OFFSET] = PARAGRAPH_BREAK_ID;
 	}
 
-	virtual void setup(std::istream *in, char const *encoding) {
-		m_in = in;
+	virtual void setup(std::istream *in_p, char const *encoding) {
+		m_in_p = in_p;
 		m_encoding = encoding;
-		if (m_lexer_p == 0x0)
-			m_lexer_p = new quex::RoughLexer(m_in, m_encoding);
-		else
-			m_lexer_p->reset(m_in, m_encoding);
-		m_token_p = 0x0;
+		reset();
 	}
 
 	virtual void reset() {
-		m_lexer_p->reset(m_in, m_encoding);
+		m_do_reset = true;
 	}
 
 	virtual rough_token_t receive() {
+		if (m_lexer_p == 0x0) {
+			if (m_in_p == 0x0) {
+				throw no_init_exception("setup hasn't been called yet on this instance of RoughLexerWrapper.");
+			}
+			m_lexer_p = new quex::RoughLexer(m_in_p, m_encoding);
+			m_do_reset = false;
+		}
+		else if (m_do_reset) {
+			m_lexer_p->reset(m_in_p, m_encoding);
+			m_token_p = 0x0;
+			m_do_reset = false;
+		}
+
 		m_lexer_p->receive(&m_token_p);
 		rough_token_t out_token;
 		if (m_token_p->type_id() == QUEX_ROUGH_TERMINATION)
@@ -52,8 +64,9 @@ public:
 private:
 	quex::RoughLexer *m_lexer_p;
 	quex::Token *m_token_p;
-	std::istream *m_in;
+	std::istream *m_in_p;
 	char const *m_encoding;
+	bool m_do_reset;
 	rough_token_id type_id_table[7];
 };
 
@@ -61,4 +74,6 @@ private:
  * and use it to construct an instance of the wrapper class. */
 extern "C" IRoughLexerWrapper* make_quex_wrapper() {
 	return new RoughLexerWrapper();
+}
+
 }
