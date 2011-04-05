@@ -5,10 +5,14 @@
 // sell and distribute this software is granted provided this copyright notice
 // appears in all copies. This software is provided "as is" without express or
 // implied warranty, and with no claim as to its suitability for any purpose.
+//
+// This file has been modified by Jiri Marsik.
 
 #include <cassert>
 #include <istream>
 #include <ostream>
+
+#include <ios>
 
 #include <boost/config.hpp>
 #include <boost/noncopyable.hpp>
@@ -58,7 +62,9 @@ class basic_pipestreambuf : public std::basic_streambuf<Ch,Tr>
     BOOST_STATIC_CONSTANT(std::size_t, chars_in_block = 500);
 
     block* m_gblock;
+    block* m_oldgblock;
     block* m_pblock;
+    int m_gblock_index;
 
     state m_gstate;
     state m_pstate;
@@ -74,9 +80,12 @@ class basic_pipestreambuf : public std::basic_streambuf<Ch,Tr>
   public:
 
     typedef typename Tr::int_type int_type;
+    typedef typename Tr::pos_type pos_type;
+    typedef typename Tr::off_type off_type;
 
     basic_pipestreambuf(bool limited_capacity)
         : m_gblock(0)
+	, m_oldgblock(0)
         , m_pblock(0)
         , m_gstate(not_opened)
         , m_pstate(not_opened)
@@ -95,8 +104,9 @@ class basic_pipestreambuf : public std::basic_streambuf<Ch,Tr>
 
     void init_blocks()
     {
-        assert(m_pblock == 0 && m_gblock == 0);
-        m_gblock = m_pblock = allocate();
+        assert(m_pblock == 0 && m_gblock == 0 && m_oldgblock == 0);
+        m_oldgblock = m_gblock = m_pblock = allocate();
+	m_gblock_index = 0;
         this->setp(m_pblock->begin(), m_pblock->end());
         this->setg(m_gblock->begin(), m_gblock->begin(), m_gblock->begin());
     }
@@ -104,24 +114,26 @@ class basic_pipestreambuf : public std::basic_streambuf<Ch,Tr>
     void destroy_blocks()
     {
         m_pblock = 0;
+	m_gblock = 0;
         this->setp(0, 0);
         this->setg(0, 0, 0);
 
-        while(m_gblock)
+        while(m_oldgblock)
         {
-            block* next = m_gblock->next;
-            deallocate(m_gblock);
-            m_gblock = next;
+            block* next = m_oldgblock->next;
+            deallocate(m_oldgblock);
+            m_oldgblock = next;
         }
     }
 
     void invariants()
     {
         // Blocks are ok
-        assert(m_gblock && m_pblock); // at least one block
+        assert(m_gblock && m_oldgblock && m_pblock); // at least one block
         assert(m_pblock->next == 0); // really last block
         if(m_limited_capacity) // maximum 2 blocks in this case
-            assert(m_gblock == m_pblock || m_gblock->next == m_pblock);
+            assert(m_gblock == m_pblock || m_gblock->next == m_pblock
+	        || m_gblock->next->next == m_pblock);
 
         // Get area in m_gblock
         assert(this->eback() == m_gblock->begin());
@@ -215,6 +227,80 @@ class basic_pipestreambuf : public std::basic_streambuf<Ch,Tr>
         m_cond.notify_one();
     }
 
+    // My addition: For completeness. Put back a character before
+    // the current input sequence (block)
+    virtual int_type pbackfail(int_type c) {
+    	std::cerr << "pbackfail was called with c = " << c << std::endl;
+    	bool success = this->seekoff(-1, std::ios_base::in);
+	if (success) {
+		if (c != Tr::eof()) {
+			*(this->gptr()) = Tr::to_char_type(c);
+		}
+		return Tr::not_eof(c);
+	} else {
+		return Tr::eof();
+	}
+    }
+
+    // My addition: Moves the get and/or put pointers by a specified offset
+    virtual pos_type seekoff(off_type off, std::ios_base::openmode which = std::ios_base::in | std::ios_base::out)
+    {
+    	//return this->seekpos(m_gblock_index * chars_in_block + (this->gptr() - m_gblock->begin()) + off, which);
+	pos_type newpos = this->seekpos(off, which);
+    	std::cerr << "seekoff was called with off = " << off << ", newpos = " << newpos << std::endl;
+	return newpos;
+    }
+
+    // My addition: Seeks to a specified offset, same as seekoff as Quex calls it like seekoff
+    virtual pos_type seekpos(pos_type sp, std::ios_base::openmode which = std::ios_base::in | std::ios_base::out)
+    {
+	// Only istream thread should call seekpos as the put pointer can't seek
+	boost::mutex::scoped_lock lock(m_mutex);
+	invariants(); // before seekpos
+
+	if (which & std::ios_base::out) {
+		std::cerr << "Error: Seeking with the put pointer." << std::endl;
+		return -1;
+	}
+	if (which & std::ios_base::in) {
+		// Old implementation which seeked to an absolute position
+		/*int block_index = sp / chars_in_block;
+		int block_offset = sp % chars_in_block;
+		std::cerr << "seekpos called with sp = " << sp << ", block_index = " << block_index
+			  << ", block_offset = " << block_offset << std::endl;
+		if ((block_index == m_gblock_index) & (block_offset <= this->gptr() - m_gblock->begin())) {
+			this->setg(m_gblock->begin(), m_gblock->begin() + block_offset, this->egptr());
+		}
+		else if (block_index == m_gblock_index - 1) {
+			if (m_oldgblock != m_gblock) {
+				m_gblock = m_oldgblock;
+				m_gblock_index--;
+				this->setg(m_gblock->begin(), m_gblock->begin() + block_offset, m_gblock->end());*/
+		if (sp <= 0) {
+			int steps_before_block = -sp - (this->gptr() - m_gblock->begin());
+			if (steps_before_block <= 0) {
+				this->setg(m_gblock->begin(), this->gptr() + sp, this->egptr());
+			} else if ((m_oldgblock != m_gblock) && (steps_before_block <= chars_in_block)) {
+				m_gblock = m_oldgblock;
+				m_gblock_index--;
+				this->setg(m_gblock->begin(), m_gblock->end() - steps_before_block, m_gblock->end());
+			} else {
+				std::cerr << "Error: Seeking with the get pointer more than 1 block back." << std::endl;
+				return -1;
+			}
+		}
+		else {
+			std::cerr << "Error: Seeking with the get pointer forwards." << std::endl;
+			return -1;
+		}
+	}
+
+	invariants(); // after seekpos
+	pos_type newpos = this->gptr() - m_gblock->begin() + m_gblock_index * chars_in_block;
+	std::cerr << "seekpos was called with sp = " << sp << ", newpos = " << newpos << std::endl;
+	return newpos;
+    }
+
     virtual int sync()
     {
         // Only ostream thread calls sync.
@@ -271,10 +357,13 @@ class basic_pipestreambuf : public std::basic_streambuf<Ch,Tr>
             }
             else
             {
-                // deallocate m_gblock
-                block* next = m_gblock->next;
-                deallocate(m_gblock);
-                m_gblock = next;
+                // deallocate m_oldgblock
+		if (m_oldgblock != m_gblock) {
+			deallocate(m_oldgblock);
+			m_oldgblock = m_gblock;
+		}
+		m_gblock = m_gblock->next;
+		m_gblock_index++;
                 Ch* begin = m_gblock->begin();
                 if(m_gblock == m_pblock)
                 {
