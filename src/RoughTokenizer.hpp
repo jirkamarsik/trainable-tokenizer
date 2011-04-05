@@ -9,7 +9,7 @@ namespace trtok {
 
 class RoughTokenizer: public tbb::filter {
 public:
-	RoughTokenizer(IRoughLexerWrapper *wrapper_p): filter(tbb::filter::serial_in_order),
+	RoughTokenizer(IRoughLexerWrapper *wrapper_p): tbb::filter(tbb::filter::serial_in_order),
 		m_wrapper_p(wrapper_p), m_hit_end(false), m_last_tok_piece("") {}
 
 	void setup(std::istream* in_p, char const *encoding) {

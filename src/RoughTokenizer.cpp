@@ -1,4 +1,5 @@
 #include <tbb/pipeline.h>
+#include <cassert>
 
 #include "RoughTokenizer.hpp"
 #include "rough_tok/rough_tok_wrapper.hpp"
@@ -12,7 +13,7 @@ void* RoughTokenizer::operator()(void*) {
 		return NULL;
 	}
 
-	// TODO: This repeated allocation could be diminished by a using some sort
+	// TODO: This repeated allocation could be diminished by using some sort
 	// of thread safe memory pool, like a tbb::concurrent_vector<chunk_t*>
 	chunk_t *chunk_p = new chunk_t;
 	
@@ -21,7 +22,7 @@ void* RoughTokenizer::operator()(void*) {
 
 	if (m_last_tok_piece == "") {
 		// This is our first go at the input
-		// We screen out all the non-textual non-blank tokens and
+		// We screen out all the non-textual or blank tokens and
 		// find the first token piece
 		do {
 			rough_tok = m_wrapper_p->receive();
@@ -39,30 +40,31 @@ void* RoughTokenizer::operator()(void*) {
 	// the text of the next token to be placed in the chunk
 	do {
 		chunk_p->tokens.push_back(token_t());
-		chunk_p->tokens[n_tokens].text = m_last_tok_piece;
+		token_t *cur_token = &chunk_p->tokens[n_tokens];
+		cur_token->text = m_last_tok_piece;
 		rough_tok = m_wrapper_p->receive();
 		while ((rough_tok.type_id != TOKEN_PIECE_ID) && (rough_tok.type_id != TERMINATION_ID)) {
 			switch (rough_tok.type_id) {
 				case MAY_SPLIT_ID:
-					chunk_p->tokens[n_tokens].decision_flags =
-						(decision_flags_t)(chunk_p->tokens[n_tokens].decision_flags | MAY_SPLIT_FLAG);
+					cur_token->decision_flags = (decision_flags_t)(cur_token->decision_flags | MAY_SPLIT_FLAG);
 					break;
 				case MAY_JOIN_ID:
-					chunk_p->tokens[n_tokens].decision_flags =
-						(decision_flags_t)(chunk_p->tokens[n_tokens].decision_flags | MAY_JOIN_FLAG);
+					cur_token->decision_flags = (decision_flags_t)(cur_token->decision_flags | MAY_JOIN_FLAG);
 					break;
 				case MAY_BREAK_SENTENCE_ID:
-					chunk_p->tokens[n_tokens].decision_flags =
-						(decision_flags_t)(chunk_p->tokens[n_tokens].decision_flags | MAY_BREAK_SENTENCE_FLAG);
+					cur_token->decision_flags = (decision_flags_t)(cur_token->decision_flags | MAY_BREAK_SENTENCE_FLAG);
 					break;
 				case WHITESPACE_ID:
-					chunk_p->tokens[n_tokens].n_newlines = 0;
+					assert(cur_token->n_newlines == -1);
+					cur_token->n_newlines = 0;
 					break;
 				case LINE_BREAK_ID:
-					chunk_p->tokens[n_tokens].n_newlines = 1;
+					assert(cur_token->n_newlines == -1);
+					cur_token->n_newlines = 1;
 					break;
 				case PARAGRAPH_BREAK_ID:
-					chunk_p->tokens[n_tokens].n_newlines = 2;
+					assert(cur_token->n_newlines == -1);
+					cur_token->n_newlines = 2;
 					break;
 			}
 			rough_tok = m_wrapper_p->receive();
