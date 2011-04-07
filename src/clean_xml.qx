@@ -28,11 +28,15 @@ header {
 #define flush_accumulator_withxml() {\
 					self.token_p()->set_number(self.nonblanks_read);\
 					self_accumulator_flush(QUEX_PREPROC_WITHXML_TEXT);\
+					self.nonblanks_read = 0;\
 					self.accumulator_size = 0;\
 				  }
 }
 
 body {
+	/* accumulator_size gives the number of characters stored in the accumulator
+	so we know when to flush it. nonblanks_read tells us how many of the characters
+	in the accumulator are nonblank. */
 	int accumulator_size, nonblanks_read;
 	bool expand_entities;
 }
@@ -61,9 +65,7 @@ mode PREPROCESS {
 	{ENTITY}|{CHARREF}			{ if (self.expand_entities) {
 							if (self.accumulator_size > 0)
 								flush_accumulator_withxml();
-							self.token_p()->set_number(self.nonblanks_read);
-							self_send1(QUEX_PREPROC_WITHXML_ENTITY, Lexeme);
-							self.nonblanks_read++; }
+							self_send1(QUEX_PREPROC_WITHXML_ENTITY, Lexeme); }
 						  else {
 						  	if (self.accumulator_size + LexemeL > ACCUMULATOR_CAPACITY)
 								flush_accumulator_withxml();
@@ -72,7 +74,6 @@ mode PREPROCESS {
 							self.nonblanks_read += LexemeL; } }
 	{XML}					{ if (self.accumulator_size > 0)
 							flush_accumulator_withxml();
-						  self.token_p()->set_number(self.nonblanks_read);
 						  self_send1(QUEX_PREPROC_WITHXML_XML, Lexeme); }
 	<<EOF>>					{ if (self.accumulator_size > 0)
 							flush_accumulator_withxml();

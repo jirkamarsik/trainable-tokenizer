@@ -29,7 +29,7 @@ typedef boost::uint32_t uint32_t;
 				/* We ate some text from the input which we forward and
 				 * we tell the output formatter to not expect any cutouts
 				 * in the slice of input containing the text we read. */\
-				position = token_p->number;\
+				position += token_p->number;\
 				cutout_t cutout;\
 				cutout.type = SYNC_MARK;\
 				cutout.position = position;\
@@ -39,38 +39,37 @@ typedef boost::uint32_t uint32_t;
 				*m_output_stream_p << unicode_to_utf8(token_p->get_text());\
 			}\
 			else if (token_p->type_id() == token_prefix##ENTITY) {\
-				/* We found an entity. If it is to be expanded, we do so
+				/* We found an entity to be expanded, we do so
 				 * and forward the expansion. If the entity is not to be
 				 * kept expanded, we also tell the output formatter about
 				 * it so it can put it back. */\
-				if (m_expand_entities) {\
-					position = token_p->number;\
-					cutout_t cutout;\
-					cutout.type = ENTITY_CUTOUT;\
-					cutout.position = position;\
-					cutout.text = unicode_to_utf8(token_p->get_text());\
-					\
-					std::string entity = unicode_to_utf8(token_p->get_text());\
-					std::string expanded;\
-					bool good_expand = expand_entity(entity, expanded);\
-					if (good_expand) {\
-						if ((m_cutout_queue_p != 0x0) && !m_keep_entities_expanded) {\
-							m_cutout_queue_p->push(cutout);\
-							*m_output_stream_p << expanded;\
-						} else {\
-							*m_output_stream_p << expanded;\
-						}\
+				cutout_t cutout;\
+				cutout.type = ENTITY_CUTOUT;\
+				cutout.position = position;\
+				cutout.text = unicode_to_utf8(token_p->get_text());\
+				\
+				std::string entity = unicode_to_utf8(token_p->get_text());\
+				uint32_t expanded_cp;\
+				bool good_expand = expand_entity(entity, expanded_cp);\
+				std::string expanded_utf8 = unicode_to_utf8(std::basic_string<uint32_t>(1, expanded_cp));\
+				if (good_expand) {\
+					if ((m_cutout_queue_p != 0x0) && !is_whitespace(expanded_cp)\
+								      && !m_keep_entities_expanded) {\
+						/* We only report the entity for replacement if
+						 * it doesn't represent a whitespace, because we eat
+						 * all the whitespace a substitute our own. */\
+						m_cutout_queue_p->push(cutout);\
+						*m_output_stream_p << expanded_utf8;\
 					} else {\
-							*m_output_stream_p << entity;\
+						*m_output_stream_p << expanded_utf8;\
 					}\
-				} else\
-					*m_output_stream_p << unicode_to_utf8(token_p->get_text());\
+				} else {\
+						*m_output_stream_p << entity;\
+				}\
+				position += is_whitespace(expanded_cp) ? 0 : 1;\
 			} else if (token_p->type_id() == token_prefix##XML) {\
 				/* We found some XML which we stash away and give it to the output
-				 * formatter so it can reinsert it later. We do not check here whether
-				 * we want to clean the XML, because the only way we could have
-				 * seen the XML token from Quex is when we are cleaning XML. */\
-				position = token_p->number;\
+				 * formatter so it can reinsert it later. */\
 				cutout_t cutout;\
 				cutout.type = XML_CUTOUT;\
 				cutout.position = position;\
@@ -98,31 +97,29 @@ inline std::string unicode_to_utf8(std::basic_string<uint32_t> const &str)
 	return clean_entities::EntityCleaner_unicode_to_char(str);
 }
 
-bool TextCleaner::expand_entity(std::string const &entity, std::string &expanded_str)
+bool TextCleaner::expand_entity(std::string const &entity, uint32_t &expanded_cp)
 {
-	uint32_t expanded_char = 0;
 	bool success = false;
 
 	if (entity[1] == '#') {
 		char const *entity_p = entity.c_str();
 		char *conv_out_p;
 		if ((entity[2] == 'x') || (entity[2] == 'X'))
-			expanded_char = strtoul(entity_p + 3, &conv_out_p, 16);
+			expanded_cp = strtoul(entity_p + 3, &conv_out_p, 16);
 		else
-			expanded_char = strtoul(entity_p + 2, &conv_out_p, 10);
+			expanded_cp = strtoul(entity_p + 2, &conv_out_p, 10);
 		success = (conv_out_p - entity_p == entity.length() - 1)
-				&& (expanded_char > 1);
+				&& (expanded_cp > 1);
 				//0x0 and 0x1 are characters we do not want in the Quex stream
 	} else {
 		typedef boost::unordered_map<std::string, uint32_t>::const_iterator iter;
 		iter lookup = m_entity_map.find(entity.substr(1, entity.length() - 2));
 		if (lookup != m_entity_map.end()) {
 			success = true;
-			expanded_char = lookup->second;
+			expanded_cp = lookup->second;
 		}
 	}
 
-	expanded_str = unicode_to_utf8(std::basic_string<uint32_t>(1, expanded_char));
 	return success;
 }
 
