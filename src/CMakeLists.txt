@@ -67,6 +67,7 @@ set (LIBS ${LIBS} ${LTDL_LIBRARIES})
 set (CHUNK_SIZE 100 CACHE STRING "Number of rough tokens constituting a work unit in the pipeline.")
 set (WORK_UNIT_COUNT 1 CACHE STRING "The number of token chunks flowing through the pipeline.")
 set (ACCUMULATOR_CAPACITY 256 CACHE STRING "Maximum size of Quex's accumulator in the TextCleaner stage.")
+set (ENCODER_BUFFER_SIZE 512 CACHE STRING "The size of the buffer used to hold characters for encoding on output.")
 set (QUEX_TOKEN_ID_OFFSET 10000)
 
 
@@ -75,11 +76,11 @@ file (MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/configured_headers)
 file (MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/code)
 
 
-configure_file (${CMAKE_CURRENT_SOURCE_DIR}/configuration.hpp.cmake
+configure_file (${CMAKE_CURRENT_SOURCE_DIR}/configuration.hpp.in
 		${CMAKE_CURRENT_BINARY_DIR}/configured_headers/configuration.hpp
 		ESCAPE_QUOTES)
 
-configure_file (${CMAKE_CURRENT_SOURCE_DIR}/rough_tok/rough_tok_wrapper.cpp.cmake
+configure_file (${CMAKE_CURRENT_SOURCE_DIR}/rough_tok/rough_tok_wrapper.cpp.in
 		${CMAKE_CURRENT_BINARY_DIR}/code/rough_tok_wrapper.cpp)
 
 configure_file (${CMAKE_CURRENT_SOURCE_DIR}/rough_tok/rough_tok_wrapper.hpp
@@ -94,7 +95,7 @@ configure_file (${CMAKE_CURRENT_SOURCE_DIR}/CMake/FindICU.cmake
 configure_file (${CMAKE_CURRENT_SOURCE_DIR}/CMake/FindLIBICONV.cmake
 		${CMAKE_CURRENT_BINARY_DIR}/code/FindLIBICONV.cmake COPYONLY)
 
-configure_file (${CMAKE_CURRENT_SOURCE_DIR}/rough_tok/CMakeLists.txt.cmake
+configure_file (${CMAKE_CURRENT_SOURCE_DIR}/rough_tok/CMakeLists.txt.in
 		${CMAKE_CURRENT_BINARY_DIR}/code/CMakeLists.txt @ONLY)
 
 
@@ -136,7 +137,8 @@ include_directories (${CMAKE_CURRENT_SOURCE_DIR}
 		     $ENV{QUEX_PATH})
 
 set (SRCS main.cpp TextCleaner.cpp ${QUEX_ENTITY}.cpp ${QUEX_XML}.cpp
-	rough_tok_compile.cpp RoughTokenizer.cpp utils.cpp OutputFormatter.cpp)
+	rough_tok_compile.cpp RoughTokenizer.cpp utils.cpp OutputFormatter.cpp
+	Encoder.cpp)
 add_executable (trtok ${SRCS})
 
 target_link_libraries (trtok ${LIBS})

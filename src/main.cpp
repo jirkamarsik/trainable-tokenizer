@@ -24,6 +24,7 @@
 #include "RoughTokenizer.hpp"
 #include "token_t.hpp"
 #include "OutputFormatter.hpp"
+#include "Encoder.hpp"
 
 using namespace std;
 using namespace trtok;
@@ -260,6 +261,11 @@ int main(int argc, char const **argv) {
 	IRoughLexerWrapper *rough_lexer_wrapper = factory_func_p();
 
 
+	Encoder enc(&std::cin, s_encoding);
+	enc.setup(&std::cout);
+	enc.do_work();
+	return 0;
+	
 	// Testing code
 	pipes::pipe my_pipe(pipes::pipe::limited_capacity);
 	pipes::opipestream my_pipe_to(my_pipe);
