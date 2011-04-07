@@ -16,21 +16,38 @@ typedef boost::uint32_t uint32_t;
  * or not. Since the preprocessors are defined using different types
  * in different namespaces, the code is repeated twice for both of them
  * through macros. */
-#define TEXTCLEANER(cleaner_namespace, cleaner_class, token_prefix) cleaner_namespace::cleaner_class lex(m_input_stream_p, m_input_encoding.c_str());\
+#define TEXTCLEANER(cleaner_namespace, cleaner_class, token_prefix) {\
+		cleaner_namespace::cleaner_class lex(m_input_stream_p, m_input_encoding.c_str());\
 		lex.expand_entities = m_expand_entities;\
 		cleaner_namespace::Token *token_p = 0x0;\
+		long position = 0;\
 \
 		do {\
 			lex.receive(&token_p);\
 \
 			if (token_p->type_id() == token_prefix##TEXT) {\
+				/* We ate some text from the input which we forward and
+				 * we tell the output formatter to not expect any cutouts
+				 * in the slice of input containing the text we read. */\
+				position = token_p->number;\
+				cutout_t cutout;\
+				cutout.type = SYNC_MARK;\
+				cutout.position = position;\
+				cutout.text = "";\
+				if (m_cutout_queue_p != 0x0)\
+					m_cutout_queue_p->push(cutout);\
 				*m_output_stream_p << unicode_to_utf8(token_p->get_text());\
 			}\
 			else if (token_p->type_id() == token_prefix##ENTITY) {\
+				/* We found an entity. If it is to be expanded, we do so
+				 * and forward the expansion. If the entity is not to be
+				 * kept expanded, we also tell the output formatter about
+				 * it so it can put it back. */\
 				if (m_expand_entities) {\
+					position = token_p->number;\
 					cutout_t cutout;\
-					cutout.kind = ENTITY;\
-					cutout.position = token_p->number;\
+					cutout.type = ENTITY_CUTOUT;\
+					cutout.position = position;\
 					cutout.text = unicode_to_utf8(token_p->get_text());\
 					\
 					std::string entity = unicode_to_utf8(token_p->get_text());\
@@ -49,14 +66,30 @@ typedef boost::uint32_t uint32_t;
 				} else\
 					*m_output_stream_p << unicode_to_utf8(token_p->get_text());\
 			} else if (token_p->type_id() == token_prefix##XML) {\
+				/* We found some XML which we stash away and give it to the output
+				 * formatter so it can reinsert it later. We do not check here whether
+				 * we want to clean the XML, because the only way we could have
+				 * seen the XML token from Quex is when we are cleaning XML. */\
+				position = token_p->number;\
 				cutout_t cutout;\
-				cutout.kind = XML;\
-				cutout.position = token_p->number;\
+				cutout.type = XML_CUTOUT;\
+				cutout.position = position;\
 				cutout.text = unicode_to_utf8(token_p->get_text());\
 				if (m_cutout_queue_p != 0x0)\
 					m_cutout_queue_p->push(cutout);\
 			}\
-		} while (token_p->type_id() != token_prefix##TERMINATION)
+		} while (token_p->type_id() != token_prefix##TERMINATION);\
+		\
+		/* In the end we send a SYNC_MARK to tell the output formatter
+		 * to not expect any more cutouts. */\
+		cutout_t cutout;\
+		cutout.type = SYNC_MARK;\
+		cutout.position = position + 1;\
+		cutout.text = "";\
+		if (m_cutout_queue_p != 0x0)\
+			m_cutout_queue_p->push(cutout);\
+}
+
 
 namespace trtok {
 

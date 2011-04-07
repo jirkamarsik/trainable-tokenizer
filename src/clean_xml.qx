@@ -26,6 +26,7 @@ header {
 #include "configuration.hpp"
 
 #define flush_accumulator_withxml() {\
+					self.token_p()->set_number(self.nonblanks_read);\
 					self_accumulator_flush(QUEX_PREPROC_WITHXML_TEXT);\
 					self.accumulator_size = 0;\
 				  }

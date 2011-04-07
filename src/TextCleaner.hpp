@@ -24,7 +24,7 @@ class TextCleaner
 public:
 	TextCleaner(pipes::opipestream *output_stream_p, std::string const &input_encoding,
 		    bool hide_xml, bool expand_entities, bool keep_entities_expanded = false,
-		    tbb::concurrent_queue<cutout_t> *cutout_queue_p = 0x0):
+		    tbb::concurrent_bounded_queue<cutout_t> *cutout_queue_p = 0x0):
 		m_output_stream_p(output_stream_p), m_input_encoding(input_encoding),
 		m_hide_xml(hide_xml), m_expand_entities(expand_entities),
 		m_keep_entities_expanded(keep_entities_expanded), m_cutout_queue_p(cutout_queue_p)
@@ -48,7 +48,7 @@ private:
 	pipes::opipestream *m_output_stream_p;
 	std::string m_input_encoding;
 	bool m_expand_entities, m_keep_entities_expanded, m_hide_xml;
-	tbb::concurrent_queue<cutout_t> *m_cutout_queue_p;
+	tbb::concurrent_bounded_queue<cutout_t> *m_cutout_queue_p;
 	boost::unordered_map<std::string, uint32_t> m_entity_map;
 };
 }
