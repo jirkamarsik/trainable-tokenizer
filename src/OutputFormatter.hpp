@@ -5,6 +5,8 @@
 #include "tbb/pipeline.h"
 #include "tbb/concurrent_queue.h"
 
+#include "pipes/pipe.hpp"
+
 #include "cutout_t.hpp"
 
 namespace trtok {
@@ -12,7 +14,7 @@ namespace trtok {
 //test
 class OutputFormatter: public tbb::filter {
 public:
-	OutputFormatter(std::ostream *output_stream_p, bool detokenize,
+	OutputFormatter(pipes::opipestream *output_stream_p, bool detokenize,
 			bool preserve_segments, bool preserve_paragraphs,
 			tbb::concurrent_bounded_queue<cutout_t> *cutout_queue_p):
 			tbb::filter(tbb::filter::serial_in_order),
@@ -31,7 +33,7 @@ public:
 
 	virtual void* operator()(void *input_p);
 private:
-	std::ostream *m_output_stream_p;
+	pipes::opipestream *m_output_stream_p;
 	tbb::concurrent_bounded_queue<cutout_t> *m_cutout_queue_p;
 	bool m_detokenize, m_preserve_segments, m_preserve_paragraphs;
 	long m_position;

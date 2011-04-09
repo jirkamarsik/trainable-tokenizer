@@ -261,53 +261,39 @@ int main(int argc, char const **argv) {
 	IRoughLexerWrapper *rough_lexer_wrapper = factory_func_p();
 
 
-	Encoder enc(&std::cin, s_encoding);
-	enc.setup(&std::cout);
-	enc.do_work();
-	return 0;
-	
 	// Testing code
-	pipes::pipe my_pipe(pipes::pipe::limited_capacity);
-	pipes::opipestream my_pipe_to(my_pipe);
-	pipes::ipipestream my_pipe_from(my_pipe);
+	pipes::pipe my_input_pipe(pipes::pipe::limited_capacity);
+	pipes::opipestream my_input_pipe_to(my_input_pipe);
+	pipes::ipipestream my_input_pipe_from(my_input_pipe);
 
 	tbb::concurrent_bounded_queue<cutout_t> cutout_queue;
-	TextCleaner cleaner(&my_pipe_to, s_encoding, o_hide_xml, o_expand_entities, o_keep_entities_expanded, &cutout_queue);
+	TextCleaner cleaner(&my_input_pipe_to, s_encoding, o_hide_xml, o_expand_entities, o_keep_entities_expanded, &cutout_queue);
 	cleaner.setup(&std::cin);
 
 	RoughTokenizer rough_tok(rough_lexer_wrapper);
-	rough_tok.setup(&my_pipe_from, "UTF-8");
+	rough_tok.setup(&my_input_pipe_from, "UTF-8");
 
+	pipes::pipe my_output_pipe(pipes::pipe::limited_capacity);
+	pipes::opipestream my_output_pipe_to(my_output_pipe);
+	pipes::ipipestream my_output_pipe_from(my_output_pipe);
 	
-	OutputFormatter formatter(&std::cout, o_detokenize, o_preserve_segments, o_preserve_paragraphs, &cutout_queue);
+	OutputFormatter formatter(&my_output_pipe_to, o_detokenize, o_preserve_segments, o_preserve_paragraphs, &cutout_queue);
 
-	/*struct chunk_printer_t: public tbb::filter {
-		chunk_printer_t(): tbb::filter(tbb::filter::serial_in_order) {}
-		virtual void* operator()(void *input_p) {
-			chunk_t *chunk_p = (chunk_t*)input_p;
-			for (std::vector<token_t>::const_iterator i = chunk_p->tokens.begin();
-			     i != chunk_p->tokens.end(); i++) {
-				std::cout << i->text << " " << i->n_newlines << " " << i->decision_flags << std::endl;
-			}
-			return NULL;
-		}
-	} chunk_printer;*/
+	Encoder encoder(&my_output_pipe_from, s_encoding);
+	encoder.setup(&std::cout);
 
 	tbb::pipeline my_pipeline;
 	my_pipeline.add_filter(rough_tok);
 	my_pipeline.add_filter(formatter);
 
 	tbb::tick_count t0 = tbb::tick_count::now();
-	try {
-		boost::thread input_thread(&TextCleaner::do_work, boost::ref(cleaner));
-		my_pipeline.run(WORK_UNIT_COUNT);
-		input_thread.join();
-	} catch (tbb::captured_exception const &exc) {
-		std::cerr << "Start of bug" << std::endl;
-		std::cerr << "Name: " << exc.name() << std::endl;
-		std::cerr << "What: " << exc.what() << std::endl;
-		std::cerr << "End of bug" << std::endl;
-	}
+
+	boost::thread input_thread(&TextCleaner::do_work, boost::ref(cleaner));
+	boost::thread output_thread(&Encoder::do_work, boost::ref(encoder));
+	my_pipeline.run(WORK_UNIT_COUNT);
+	input_thread.join();
+	output_thread.join();
+
 	tbb::tick_count t1 = tbb::tick_count::now();
 	std::cout << (t1 - t0).seconds() << "s" << std::endl;
 

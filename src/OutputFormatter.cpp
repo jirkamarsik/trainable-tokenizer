@@ -65,7 +65,7 @@ void* OutputFormatter::operator() (void *input_p) {
 					// Opening tags are left for the next token.
 					break;
 			}
-			m_cutout_queue_p->pop(m_last_cutout );
+			m_cutout_queue_p->pop(m_last_cutout);
 		}
 
 		// Check if we should insert a paragraph break...
@@ -84,6 +84,16 @@ void* OutputFormatter::operator() (void *input_p) {
 		else if (!(token->decision_flags & DO_JOIN_FLAG) && token->n_newlines >= 0)
 			*m_output_stream_p << ' ';
 	}
+
+	if (chunk_p->is_final)
+		// If this is the final chunk, we send an EOF to the converter
+		// so it can flush and stop.
+		m_output_stream_p->close();
+
+	// TODO: This could be optimized by sending the pointer back to
+	// the rough tokenizer which is responsible for repeatedly allocating
+	// these chunks.
+	delete chunk_p;
 
 	return NULL;
 }
