@@ -3,6 +3,7 @@
 #include <string>
 #include <vector>
 #include <algorithm>
+#include <map>
 #include <boost/program_options.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
@@ -26,6 +27,7 @@
 #include "rough_tok_compile.hpp"
 #include "RoughTokenizer.hpp"
 #include "token_t.hpp"
+#include "FeatureExtractor.hpp"
 #include "OutputFormatter.hpp"
 #include "Encoder.hpp"
 
@@ -298,7 +300,24 @@ int main(int argc, char const **argv) {
 			return 1;
 		}
 		regex_properties.push_back(regex);
+		n_properties++;
 	}
+
+	std::multimap<std::string, int> word_to_enum_props;
+	for (std::vector<fs::path>::const_iterator i = enump_files.begin();
+	     i != enump_files.end(); i++) {
+		prop_name_to_id[i->stem().string()] = n_properties;
+		fs::ifstream enum_file(*i);
+		while (enum_file) {
+			std::string line;
+			getline(enum_file, line);
+			if (line.length() == 0)
+				continue;
+			word_to_enum_props.insert(std::make_pair(line, n_properties));
+		}
+		n_properties++;
+	}
+	
 
 	// Testing code
 	pipes::pipe my_input_pipe(pipes::pipe::limited_capacity);
@@ -312,6 +331,8 @@ int main(int argc, char const **argv) {
 	RoughTokenizer rough_tok(rough_lexer_wrapper);
 	rough_tok.setup(&my_input_pipe_from, "UTF-8");
 
+	FeatureExtractor feature_extractor(n_properties, regex_properties, word_to_enum_props);
+
 	pipes::pipe my_output_pipe(pipes::pipe::limited_capacity);
 	pipes::opipestream my_output_pipe_to(my_output_pipe);
 	pipes::ipipestream my_output_pipe_from(my_output_pipe);
@@ -323,6 +344,7 @@ int main(int argc, char const **argv) {
 
 	tbb::pipeline my_pipeline;
 	my_pipeline.add_filter(rough_tok);
+	my_pipeline.add_filter(feature_extractor);
 	my_pipeline.add_filter(formatter);
 
 

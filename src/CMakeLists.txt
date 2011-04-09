@@ -138,7 +138,7 @@ include_directories (${CMAKE_CURRENT_SOURCE_DIR}
 
 set (SRCS main.cpp TextCleaner.cpp ${QUEX_ENTITY}.cpp ${QUEX_XML}.cpp
 	rough_tok_compile.cpp RoughTokenizer.cpp utils.cpp OutputFormatter.cpp
-	Encoder.cpp)
+	Encoder.cpp FeatureExtractor.cpp)
 add_executable (trtok ${SRCS})
 
 target_link_libraries (trtok ${LIBS})
