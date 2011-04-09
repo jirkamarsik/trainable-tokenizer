@@ -49,9 +49,8 @@ void read_contexts(std::vector<fs::path> const &files, std::vector<context_t> &c
 		fs::ifstream file(*i);
 		int line_number = 0;
 		
-		while (file) {
-			std::string line;
-			getline(file, line);
+		std::string line;
+		while (getline(file, line)) {
 			line_number++;
 			if ((line.length() == 0) || (line[0] == '#')) {
 				continue;
@@ -97,21 +96,13 @@ void read_character_set(std::vector<fs::path> const &charset_files, std::vector<
 	for (std::vector<fs::path>::const_iterator i = charset_files.begin();
 	     i != charset_files.end(); i++) {
 		fs::ifstream file(*i);
-		bool last_line_was_blank = false;
 
-		while (file) {
-			std::string line;
-			getline(file, line);
-
-			if (last_line_was_blank) {
+		std::string line;
+		while (getline(file, line)) {
+			if (line.length() == 0) {
 				// An empty line stands for the newline character.
-				last_line_was_blank = false;
 				charset.push_back(0x0A);
 				charset.push_back(0x0D);
-			}
-			if (line.length() == 0) {
-				// getline gives us a blank file at the end of every file
-				last_line_was_blank = true;
 			}
 
 			std::basic_string<uint32_t> codepoints = utf8_to_unicode(line);
@@ -268,9 +259,8 @@ bool compile_rough_lexer(std::vector<fs::path> const &split_files,
 		}
 		if (!file_set_changed) {
 			// There could still be more filenames in the file
-			while (file_list_istream) {
-				std::string line;
-				getline(file_list_istream, line);
+			std::string line;
+			while (getline(file_list_istream, line)) {
 				if (line.length() > 0) {
 					file_set_changed = true;
 				}

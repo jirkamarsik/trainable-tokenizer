@@ -4,6 +4,7 @@
 #include <vector>
 #include <algorithm>
 #include <map>
+#include <utility>
 #include <boost/program_options.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
@@ -269,6 +270,8 @@ int main(int argc, char const **argv) {
 
 
 	// READING AND PARSING THE PROPERTY DEFINITIONS
+	
+	// A mapping from property names to indices.
 	boost::unordered_map<std::string, int> prop_name_to_id;
 	int n_properties = 0;
 
@@ -278,9 +281,8 @@ int main(int argc, char const **argv) {
 		prop_name_to_id[i->stem().string()] = n_properties;
 		std::string regex_string("");
 		fs::ifstream regex_file(*i);
-		while (regex_file) {
-			std::string line;
-			getline(regex_file, line);
+		std::string line;
+		while (getline(regex_file, line)) {
 			if ((line.length() == 0) || (line[0] == '#'))
 				continue;
 			if (regex_string == "")
@@ -308,9 +310,8 @@ int main(int argc, char const **argv) {
 	     i != enump_files.end(); i++) {
 		prop_name_to_id[i->stem().string()] = n_properties;
 		fs::ifstream enum_file(*i);
-		while (enum_file) {
-			std::string line;
-			getline(enum_file, line);
+		std::string line;
+		while (getline(enum_file, line)) {
 			if (line.length() == 0)
 				continue;
 			word_to_enum_props.insert(std::make_pair(line, n_properties));
