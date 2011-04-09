@@ -13,8 +13,8 @@ find_program (PCRE_CONFIG NAMES pcre-config DOC "Path to the helper pcre-config 
 mark_as_advanced (PCRE_CONFIG)
 
 if (PCRE_CONFIG)
-  execute_process (COMMAND ${PCRE_CONFIG} --cflags OUTPUT_VARIABLE PCRECPP_CONFIG_PREPROCESSOR)
-  execute_process (COMMAND ${PCRE_CONFIG} --libs-cpp OUTPUT_VARIABLE PCRECPP_CONFIG_LINKER)
+  execute_process (COMMAND ${PCRE_CONFIG} --cflags OUTPUT_VARIABLE PCRE_CONFIG_PREPROCESSOR)
+  execute_process (COMMAND ${PCRE_CONFIG} --libs-cpp OUTPUT_VARIABLE PCRE_CONFIG_LINKER)
 
   # icu-config returns the parameters as preprocessor and linker flags, which we have to
   # disassemble to get at the library names and directories.
@@ -36,7 +36,7 @@ if (PCRE_CONFIG)
       string (REGEX REPLACE "^-L" "" LIBRARY_DIR ${LINKER_ARG})
       set (PCRECPP_LIBRARY_DIRS ${PCRECPP_LIBRARY_DIRS} ${LIBRARY_DIR})
     elseif (LINKER_ARG MATCHES "^-l.+")
-      string (REGEX REPLACE "^-l.+" "" LIBRARY ${LINKER_ARG})
+      string (REGEX REPLACE "^-l" "" LIBRARY ${LINKER_ARG})
       set (PCRECPP_LIBRARIES ${PCRECPP_LIBRARIES} ${LIBRARY})
     endif (LINKER_ARG MATCHES "^-L.+")
   endforeach (LINKER_ARG)
@@ -48,17 +48,18 @@ else (PCRE_CONFIG)
   include (LibFindMacros)
   
   # Try to use pkg-config's data to help find the include dir and lib file
-  libfind_pkg_search_modules (PCRECPP_PKGCONF perl perlcpp QUIET)
+  libfind_pkg_search_modules (PCRECPP_PKGCONF pcre pcrecpp QUIET)
 
   # Pass on any other options like macro definitions found by pkg-config
   set (PCRECPP_DEFINITIONS PCRECPP_PKGCONF_CFLAGS_OTHER)
   
   # Find include dir and library file, possibly with help of pkg-config
   find_path (PCRECPP_INCLUDE_DIR NAMES pcre.h pcrecpp.h HINTS ${PCRECPP_PKGCONF_INCLUDE_DIRS} ${PCRECPP_PKGCONF_INCLUDEDIR})
-  find_library (PCRECPP_LIBRARY NAMES pcre pcrecpp HINTS ${PCRECPP_PKGCONF_LIBRARY_DIRS})
+  find_library (PCRE_LIBRARY NAMES pcre HINTS ${PCRECPP_PKGCONF_LIBRARY_DIRS})
+  find_library (PCRECPP_LIBRARY NAMES pcrecpp HINTS ${PCRECPP_PKGCONF_LIBRARY_DIRS})
 
   # Set the PCRECPP_PROCESS_ variables and call libfind_process to wrap it all up and report
   set (PCRECPP_PROCESS_INCLUDES PCRECPP_INCLUDE_DIR)
-  set (PCRECPP_PROCESS_LIBS PCRECPP_LIBRARY)
+  set (PCRECPP_PROCESS_LIBS PCRE_LIBRARY PCRECPP_LIBRARY)
   libfind_process (PCRECPP)
 endif (PCRE_CONFIG)
