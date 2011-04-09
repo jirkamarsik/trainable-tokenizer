@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <boost/program_options.hpp>
 #include <boost/filesystem.hpp>
+#include <boost/filesystem/fstream.hpp>
 #include <boost/unordered_map.hpp>
 #include <boost/ref.hpp>
 #include <boost/thread.hpp>
@@ -13,6 +14,8 @@
 #include "tbb/tbb_exception.h"
 #include "tbb/tick_count.h"
 #include <ltdl.h>
+#include <pcre.h>
+#include <pcrecpp.h>
 
 #include "pipes/pipe.hpp"
 
@@ -211,13 +214,13 @@ int main(int argc, char const **argv) {
 	/* When we encounter two paths with the same filename, we take the former.
 	 * The following "duplicates" are guaranteed to be less specific.*/
 	string last_filename = "";
-	typedef boost::unordered_map< string, vector<fs::path>* >::iterator map_iter;
 	for (vector<fs::path>::const_iterator i = relevant_files.begin(); i != relevant_files.end(); i++) {
 		// Scheme inheritance: only the most specific instance of a file
 		if (i->filename() == last_filename) {
 			continue;
 		}
 
+		typedef boost::unordered_map< string, vector<fs::path>* >::iterator map_iter;
 		map_iter lookup = file_vectors.find(i->extension().string());
 		if (lookup != file_vectors.end()) {
 			lookup->second->push_back(*i);
@@ -228,6 +231,8 @@ int main(int argc, char const **argv) {
 	fs::path build_path = fs::path(e_trtok_path) / fs::path("build") / scheme_rel_path;
 	fs::create_directories(build_path);
 
+
+	// COMPILING AND LOADING THE ROUGH TOKENIZER
 	try {
 		compile_rough_lexer(split_files, join_files, begin_files, end_files, build_path);
 	} catch (config_exception const &exc) {
@@ -261,6 +266,40 @@ int main(int argc, char const **argv) {
 	IRoughLexerWrapper *rough_lexer_wrapper = factory_func_p();
 
 
+	// READING AND PARSING THE PROPERTY DEFINITIONS
+	boost::unordered_map<std::string, int> prop_name_to_id;
+	int n_properties = 0;
+
+	std::vector<pcrecpp::RE> regex_properties;
+	for (std::vector<fs::path>::const_iterator i = rep_files.begin();
+	     i != rep_files.end(); i++) {
+		prop_name_to_id[i->stem().string()] = n_properties;
+		std::string regex_string("");
+		fs::ifstream regex_file(*i);
+		while (regex_file) {
+			std::string line;
+			getline(regex_file, line);
+			if ((line.length() == 0) || (line[0] == '#'))
+				continue;
+			if (regex_string == "")
+				regex_string = line;
+			else {
+				std::cerr << *i <<
+				": Error: More than 1 non-blank non-comment line in regex property definition file."
+				<< std::endl;
+				return 1;
+			}
+		}
+		pcrecpp::RE regex(regex_string, PCRE_UTF8 | PCRE_UCP);
+		if (regex.error() != "") {
+			std::cerr << *i <<
+			": Error: The following error occured when compiling the regular expression:\n"
+			<< regex.error() << std::endl;
+			return 1;
+		}
+		regex_properties.push_back(regex);
+	}
+
 	// Testing code
 	pipes::pipe my_input_pipe(pipes::pipe::limited_capacity);
 	pipes::opipestream my_input_pipe_to(my_input_pipe);
@@ -285,6 +324,7 @@ int main(int argc, char const **argv) {
 	tbb::pipeline my_pipeline;
 	my_pipeline.add_filter(rough_tok);
 	my_pipeline.add_filter(formatter);
+
 
 	tbb::tick_count t0 = tbb::tick_count::now();
 
