@@ -48,6 +48,7 @@
 # TBB_LIBRARIES, the libraries to link against to use TBB.
 # TBB_DEBUG_LIBRARIES, the libraries to link against to use TBB with debug symbols.
 # TBB_FOUND, If false, don't try to use TBB.
+# TBB_DEBUG_FOUND, If false, don't try to use the TBB debug libraries.
 
 
 if (WIN32)
@@ -253,12 +254,16 @@ if (TBB_INCLUDE_DIR)
     if (TBB_LIBRARY)
         set (TBB_FOUND "YES")
         set (TBB_LIBRARIES ${TBB_LIBRARY} ${TBB_MALLOC_LIBRARY} ${TBB_LIBRARIES})
-        set (TBB_DEBUG_LIBRARIES ${TBB_LIBRARY_DEBUG} ${TBB_MALLOC_LIBRARY_DEBUG} ${TBB_DEBUG_LIBRARIES})
+	if (TBB_DEBUG_LIBRARY)
+	  set (TBB_DEBUG_FOUND "YES")
+          set (TBB_DEBUG_LIBRARIES ${TBB_LIBRARY_DEBUG} ${TBB_MALLOC_LIBRARY_DEBUG} ${TBB_DEBUG_LIBRARIES})
+	  # My change: Self-built TBB stores the debug libraries in a separate directory.
+	  set (TBB_DEBUG_LIBRARY_DIRS ${TBB_LIBRARY_DEBUG_DIR} CACHE PATH "TBB debug library directory" FORCE)
+	  mark_as_advanced(TBB_DEBUG_LIBRARY_DIRS TBB_DEBUG_LIBRARIES)
+	endif (TBB_DEBUG_LIBRARY)
         set (TBB_INCLUDE_DIRS ${TBB_INCLUDE_DIR} CACHE PATH "TBB include directory" FORCE)
         set (TBB_LIBRARY_DIRS ${TBB_LIBRARY_DIR}  CACHE PATH "TBB library directory" FORCE)
-	# My change: Self-built TBB stores the debug libraries in a separate directory.
-	set (TBB_DEBUG_LIBRARY_DIRS ${TBB_LIBRARY_DEBUG_DIR} CACHE PATH "TBB debug library directory" FORCE)
-	mark_as_advanced(TBB_INCLUDE_DIRS TBB_LIBRARY_DIRS TBB_DEBUG_LIBRARY_DIRS TBB_LIBRARIES TBB_DEBUG_LIBRARIES)
+	mark_as_advanced(TBB_INCLUDE_DIRS TBB_LIBRARY_DIRS TBB_LIBRARIES )
         message(STATUS "Found Intel TBB")
     endif (TBB_LIBRARY)
 endif (TBB_INCLUDE_DIR)
