@@ -145,4 +145,12 @@ set (SRCS main.cpp TextCleaner.cpp ${QUEX_ENTITY}.cpp ${QUEX_XML}.cpp
 	Encoder.cpp FeatureExtractor.cpp)
 add_executable (trtok ${SRCS})
 
+# The gold linker now in use in modern GNU/Linux distributions such as
+# Debian or Fedora no longer automatically links libraries for unresolved
+# symbols in linked libraries. These platform-specific libraries must
+# therefore be linked manually.
+if (UNIX)
+  set (LIBS ${LIBS} pthread rt)
+endif (UNIX)
+
 target_link_libraries (trtok ${LIBS})
