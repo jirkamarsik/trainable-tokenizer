@@ -141,8 +141,8 @@ include_directories (${CMAKE_CURRENT_SOURCE_DIR}
 		     $ENV{QUEX_PATH})
 
 set (SRCS main.cpp TextCleaner.cpp ${QUEX_ENTITY}.cpp ${QUEX_XML}.cpp
-	rough_tok_compile.cpp RoughTokenizer.cpp utils.cpp OutputFormatter.cpp
-	Encoder.cpp FeatureExtractor.cpp)
+    rough_tok_compile.cpp RoughTokenizer.cpp OutputFormatter.cpp
+    Encoder.cpp FeatureExtractor.cpp Classifier.cpp)
 add_executable (trtok ${SRCS})
 
 # The gold linker now in use in modern GNU/Linux distributions such as

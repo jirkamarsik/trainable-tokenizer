@@ -29,6 +29,7 @@
 #include "RoughTokenizer.hpp"
 #include "token_t.hpp"
 #include "FeatureExtractor.hpp"
+#include "Classifier.hpp"
 #include "OutputFormatter.hpp"
 #include "Encoder.hpp"
 
@@ -334,6 +335,9 @@ int main(int argc, char const **argv) {
 
 	FeatureExtractor feature_extractor(n_properties, regex_properties, word_to_enum_props);
 
+        std::ifstream* annot_stream = new std::ifstream("annot.txt");
+        Classifier classifier(s_mode, o_print_questions, annot_stream);
+
 	pipes::pipe my_output_pipe(pipes::pipe::limited_capacity);
 	pipes::opipestream my_output_pipe_to(my_output_pipe);
 	pipes::ipipestream my_output_pipe_from(my_output_pipe);
@@ -346,6 +350,7 @@ int main(int argc, char const **argv) {
 	tbb::pipeline my_pipeline;
 	my_pipeline.add_filter(rough_tok);
 	my_pipeline.add_filter(feature_extractor);
+        my_pipeline.add_filter(classifier);
 	my_pipeline.add_filter(formatter);
 
 
