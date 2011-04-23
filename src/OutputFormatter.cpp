@@ -69,20 +69,23 @@ void* OutputFormatter::operator() (void *input_p) {
 		}
 
 		// Check if we should insert a paragraph break...
-		if (m_preserve_paragraphs && (token->n_newlines >= 2))
+		if (m_preserve_paragraphs && (token->n_newlines >= 2)) {
 			*m_output_stream_p << "\n\n";
 		// or a simple line break...
-		else if (m_preserve_segments && (token->n_newlines >= 1))
+		} else if (m_preserve_segments) {
+                    if (token->n_newlines >= 1)
 			*m_output_stream_p << '\n';
-		else if (token->decision_flags & DO_BREAK_SENTENCE_FLAG)
+		} else if (token->decision_flags & DO_BREAK_SENTENCE_FLAG) {
 			*m_output_stream_p << '\n';
 		// or only a space.
-		else if (m_detokenize && (token->n_newlines >= 0))
+		} else if (m_detokenize) {
+                    if (token->n_newlines >= 0)
 			*m_output_stream_p << ' ';
-		else if ((token->decision_flags & DO_SPLIT_FLAG) && token->n_newlines == -1)
+		} else if ((token->decision_flags & DO_SPLIT_FLAG) && token->n_newlines == -1) {
 			*m_output_stream_p << ' ';
-		else if (!(token->decision_flags & DO_JOIN_FLAG) && token->n_newlines >= 0)
+		} else if (!(token->decision_flags & DO_JOIN_FLAG) && token->n_newlines >= 0) {
 			*m_output_stream_p << ' ';
+                }
 	}
 
 	if (chunk_p->is_final)
