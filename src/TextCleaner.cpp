@@ -92,11 +92,6 @@ typedef boost::uint32_t uint32_t;
 
 namespace trtok {
 
-inline std::string unicode_to_utf8(std::basic_string<uint32_t> const &str)
-{
-	return clean_entities::EntityCleaner_unicode_to_char(str);
-}
-
 bool TextCleaner::expand_entity(std::string const &entity, uint32_t &expanded_cp)
 {
 	bool success = false;
