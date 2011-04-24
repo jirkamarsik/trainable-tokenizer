@@ -61,7 +61,7 @@ void read_contexts(std::vector<fs::path> const &files, std::vector<context_t> &c
 			char *line_data = new char[line.length() + 1];
 			line.copy(line_data, line.length());
 			line_data[line.length()] = '\0';
-			char *prefix = strtok(line_data, "\t");
+			char *prefix = strtok(line_data, " \t");
 			char *suffix = strtok(NULL, "\t");
 			if (prefix == NULL) {
 				// An empty line.
