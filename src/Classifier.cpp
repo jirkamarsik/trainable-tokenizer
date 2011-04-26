@@ -1,3 +1,4 @@
+#include <iostream>
 #include <string>
 #include <vector>
 
@@ -76,39 +77,45 @@ void* Classifier::operator()(void* input_p) {
 
     // Check for the presence of whitespace/newlines between this and
     // the next token
-    if (is_whitespace(annot_char)) {
-      bool line_break = consume_whitespace();
+    if ((token + 1 != chunk_p->tokens.end()) || !chunk_p->is_final) {
+      if (is_whitespace(annot_char)) {
+        bool line_break = consume_whitespace();
 
-      if (token->n_newlines == -1)
-        if (token->decision_flags & MAY_SPLIT_FLAG)
-          token->decision_flags = (decision_flags_t)
-              (token->decision_flags | DO_SPLIT_FLAG);
-        else
-          report_alignment_warning("word break",
-            token->text,
-            (token + 1 != chunk_p->tokens.end()) ? (token + 1)->text : "",
-            "Consider adding a tokenization rule to a *.split file.");
-      if (line_break)
-        if (token->decision_flags & MAY_BREAK_SENTENCE_FLAG)
-          token->decision_flags = (decision_flags_t)
-              (token->decision_flags | DO_BREAK_SENTENCE_FLAG);
-        else
-          report_alignment_warning("sentence break",
-            token->text,
-            (token + 1 != chunk_p->tokens.end()) ? (token + 1)->text : "",
-            "Consider adding more sentence terminators or starters.");
-    } else {
-      if (token->n_newlines >= 0)
-        if (token->decision_flags & MAY_JOIN_FLAG)
-          token->decision_flags = (decision_flags_t)
-            (token->decision_flags | DO_JOIN_FLAG);
-        else
-          report_alignment_warning("joining of words",
-            token->text,
-            (token + 1 != chunk_p->tokens.end()) ? (token + 1)->text : "",
-            "Consider adding a tokenization rule to a *.join file.");
+        if (token->n_newlines == -1)
+          if (token->decision_flags & MAY_SPLIT_FLAG)
+            token->decision_flags = (decision_flags_t)
+                (token->decision_flags | DO_SPLIT_FLAG);
+          else
+            report_alignment_warning("word break",
+              token->text,
+              (token + 1 != chunk_p->tokens.end()) ? (token + 1)->text : "",
+              "Consider adding a tokenization rule to a *.split file.");
+        if (line_break)
+          if (token->decision_flags & MAY_BREAK_SENTENCE_FLAG)
+            token->decision_flags = (decision_flags_t)
+                (token->decision_flags | DO_BREAK_SENTENCE_FLAG);
+          else
+            report_alignment_warning("sentence break",
+              token->text,
+              (token + 1 != chunk_p->tokens.end()) ? (token + 1)->text : "",
+              "Consider adding more sentence terminators or starters.");
+      } else {
+        if (token->n_newlines >= 0)
+          if (token->decision_flags & MAY_JOIN_FLAG)
+            token->decision_flags = (decision_flags_t)
+              (token->decision_flags | DO_JOIN_FLAG);
+          else
+            report_alignment_warning("joining of words",
+              token->text,
+              (token + 1 != chunk_p->tokens.end()) ? (token + 1)->text : "",
+              "Consider adding a tokenization rule to a *.join file.");
+      }
     }
   } // for (std::vector<token_t>::iterator token = chunk_p->tokens.begin();...
+
+  if (chunk_p->is_final && !m_annot_stream_p->eof()) {
+    std::cerr << "Warning: Extra text at the end of annotated data.";
+  }
 
   return chunk_p;
 }

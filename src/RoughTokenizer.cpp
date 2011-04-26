@@ -27,18 +27,14 @@ void* RoughTokenizer::operator()(void*) {
 		do {
 			rough_tok = m_wrapper_p->receive();
 		} while ((rough_tok.type_id != TOKEN_PIECE_ID) && (rough_tok.type_id != TERMINATION_ID));
-		if (rough_tok.type_id == TERMINATION_ID) {
-			// The input was empty
-			return NULL;
-		}
-		else {
+		if (rough_tok.type_id != TERMINATION_ID) {
 			m_last_tok_piece = rough_tok.text;
 		}
 	}
 
 	// Pre-condition: m_last_tok_piece contains a non-empty string with
 	// the text of the next token to be placed in the chunk
-	do {
+	while ((n_tokens < CHUNK_SIZE) && (rough_tok.type_id != TERMINATION_ID)) {
 		chunk_p->tokens.push_back(token_t());
 		token_t *cur_token = &chunk_p->tokens[n_tokens];
 		cur_token->text = m_last_tok_piece;
@@ -73,7 +69,7 @@ void* RoughTokenizer::operator()(void*) {
 		if (rough_tok.type_id == TOKEN_PIECE_ID) {
 			m_last_tok_piece = rough_tok.text;
 		}
-	} while ((n_tokens < CHUNK_SIZE) && (rough_tok.type_id != TERMINATION_ID));
+	}
 
 	if (rough_tok.type_id == TERMINATION_ID) {
 		m_hit_end = true;
