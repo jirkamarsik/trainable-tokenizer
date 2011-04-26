@@ -134,15 +134,29 @@ add_custom_command (OUTPUT ${QUEX_XML} ${QUEX_XML}.cpp ${QUEX_XML}-token
 		    DEPENDS clean_xml.qx VERBATIM
 		    COMMENT "Building XmlCleaner with quex")
 
+set (QUEX_FEATURES quex_files/trtok_read_features_FeaturesReader)
+add_custom_command (OUTPUT ${QUEX_FEATURES} ${QUEX_FEATURES}.cpp ${QUEX_FEATURES}-token
+                           ${QUEX_FEATURES}-configuration ${QUEX_FEATURES}-token_ids
+                    COMMAND quex --mode-files 		${CMAKE_CURRENT_SOURCE_DIR}/read_features.qx
+				 --engine		trtok::read_features::FeaturesReader
+                                 --buffer-element-size  4
+				 --token-prefix		QUEX_FEATURES_
+				 --odir			${CMAKE_CURRENT_BINARY_DIR}/quex_files
+                                 ${QUEX_CONVERTER}
+		    DEPENDS read_features.qx VERBATIM
+		    COMMENT "Building FeaturesReader with quex")
+
 
 include_directories (${CMAKE_CURRENT_SOURCE_DIR}
 		     ${CMAKE_CURRENT_BINARY_DIR}/configured_headers
 		     ${CMAKE_CURRENT_BINARY_DIR}/quex_files
 		     $ENV{QUEX_PATH})
 
+add_definitions ("-DQUEX_OPTION_ASSERTS_WARNING_MESSAGE_DISABLED")
+
 set (SRCS main.cpp TextCleaner.cpp ${QUEX_ENTITY}.cpp ${QUEX_XML}.cpp
     rough_tok_compile.cpp RoughTokenizer.cpp OutputFormatter.cpp
-    Encoder.cpp FeatureExtractor.cpp Classifier.cpp)
+    Encoder.cpp FeatureExtractor.cpp Classifier.cpp ${QUEX_FEATURES}.cpp)
 add_executable (trtok ${SRCS})
 
 # The gold linker now in use in modern GNU/Linux distributions such as

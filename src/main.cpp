@@ -61,6 +61,20 @@ bool path_compare(fs::path const &a, fs::path const &b) {
   return 1;\
 }
 
+#define FEATURES_ERROR(message) {\
+  std::cerr << features_file << ":" << features_token_p->line_number()\
+<< ":" << features_token_p->column_number() << ": Error: "\
+<< message << std::endl;\
+  return 1;\
+}
+
+#define FEATURES_SYNTAX_ERROR(expected) {\
+  std::cerr << features_file << ":" << features_token_p->line_number()\
+<< ":" << features_token_p->column_number() << ": Error: "\
+<< "Syntax error! Expected " << expected << "." << std::endl;\
+  return 1;\
+}
+
 void report_time(char const *description, double seconds) {
   std::clog << description << ": " << seconds << "s" << std::endl;
 }
@@ -128,7 +142,9 @@ tbb::tick_count start_time = tbb::tick_count::now();
                 END_WITH_ERROR("trtok", "Encountered unknown option " << exc.get_option_name() << ". See trtok --help for proper usage.");
 	} catch (po::required_option const &exc) {
 		END_WITH_ERROR("trtok", "Missing mandatory parameter " << exc.get_option_name() << ". See trtok --help for proper usage.");
-	}
+	} catch (po::too_many_positional_options_error const &exc) {
+                END_WITH_ERROR("trtok", "Too many arguments. See 'trtok --help'.");
+        }
 
 tbb::tick_count options_parsed_time = tbb::tick_count::now();
 	
@@ -287,14 +303,6 @@ tbb::tick_count roughtok_loaded_time = tbb::tick_count::now();
 	int n_properties = 0;
         int n_regular_properties = 0;
 
-        prop_name_to_id["%length"] = n_properties;
-        prop_id_to_name.push_back("%length");
-        n_properties++;
-
-        prop_name_to_id["%Word"] = n_properties;
-        prop_id_to_name.push_back("%Word");
-        n_properties++;
-
 	std::vector<pcrecpp::RE> regex_properties;
 	for (std::vector<fs::path>::const_iterator i = rep_files.begin();
 	     i != rep_files.end(); i++) {
@@ -341,21 +349,160 @@ tbb::tick_count regex_properties_compiled_time = tbb::tick_count::now();
                 n_regular_properties++;
 	}
 
+        prop_name_to_id["%length"] = n_properties;
+        prop_id_to_name.push_back("%length");
+        n_properties++;
+
+        prop_name_to_id["%Word"] = n_properties;
+        prop_id_to_name.push_back("%Word");
+        n_properties++;
+
 tbb::tick_count enum_properties_compiled_time = tbb::tick_count::now();
 
         if (features_file.empty())
           END_WITH_ERROR("trtok", "No features file found.");
 
-        read_features::FeaturesReader features_lex(features_file.native());
+        read_features::FeaturesReader features_lex(features_file.native(), "UTF-8");
         read_features::Token *features_token_p = 0x0;
 
+        try {
         std::vector< std::pair< std::vector<int>,std::vector<int> > > features;
         std::vector< std::vector< std::pair<int,int> > > combined_features;
+        typedef boost::unordered_map<std::string, int>::const_iterator
+              lookup_iter;
         do {
           features_lex.receive(&features_token_p);
-
-          
+          if (features_token_p->type_id() == QUEX_FEATURES_NUMBER) {
+            std::vector<int> offsets;
+            do {
+              int left = boost::lexical_cast<int>
+                    (features_token_p->pretty_char_text());
+              features_lex.receive(&features_token_p);
+              if (features_token_p->type_id() == QUEX_FEATURES_DOUBLEDOT) {
+                // an interval
+                features_lex.receive(&features_token_p);
+                if (features_token_p->type_id() != QUEX_FEATURES_NUMBER)
+                  FEATURES_SYNTAX_ERROR("a number");
+                int right = boost::lexical_cast<int>
+                      (features_token_p->pretty_char_text());
+                if (right < left)
+                  FEATURES_ERROR("Interval upper bound lower than lower bound.");
+                for (int offset = left; left <= right; left++) {
+                  offsets.push_back(offset);
+                }
+                features_lex.receive(&features_token_p);
+              } else if ((features_token_p->type_id() == QUEX_FEATURES_COMMA)
+                     || (features_token_p->type_id() == QUEX_FEATURES_COLON)) {
+                // a single offset
+                offsets.push_back(left);
+              } else FEATURES_SYNTAX_ERROR("a double-dot, a comma or a colon");
+              if (features_token_p->type_id() == QUEX_FEATURES_COMMA) {
+                features_lex.receive(&features_token_p);
+              } else if (features_token_p->type_id() != QUEX_FEATURES_COLON)
+                FEATURES_SYNTAX_ERROR("a comma or a colon");
+            } while (features_token_p->type_id() == QUEX_FEATURES_NUMBER);
+            features_lex.receive(&features_token_p);
+            
+            std::vector<int> properties;
+            while ((features_token_p->type_id() == QUEX_FEATURES_IDENTIFIER)
+                || (features_token_p->type_id() == QUEX_FEATURES_LPAREN)
+                || (features_token_p->type_id() == QUEX_FEATURES_STAR)) {
+              if (features_token_p->type_id() == QUEX_FEATURES_STAR) {
+                for (int property = 0; property != n_regular_properties;
+                 property++) {
+                  properties.push_back(property);
+                }
+                features_lex.receive(&features_token_p);
+                if (features_token_p->type_id() == QUEX_FEATURES_COMMA)
+                  features_lex.receive(&features_token_p);
+                else if (features_token_p->type_id() != QUEX_FEATURES_SEMICOLON)
+                  FEATURES_SYNTAX_ERROR("a comma or a semicolon");
+              } else if (features_token_p->type_id() == QUEX_FEATURES_IDENTIFIER) {
+                lookup_iter lookup =
+                  prop_name_to_id.find(features_token_p->pretty_char_text());
+                if (lookup == prop_name_to_id.end())
+                  FEATURES_ERROR("Property \""
+                    << features_token_p->pretty_char_text() << "\" not defined.");
+                properties.push_back(lookup->second);
+                features_lex.receive(&features_token_p);
+                if (features_token_p->type_id() == QUEX_FEATURES_COMMA)
+                  features_lex.receive(&features_token_p);
+                else if (features_token_p->type_id() != QUEX_FEATURES_SEMICOLON)
+                  FEATURES_SYNTAX_ERROR("a comma or a semicolon");
+              } else if (features_token_p->type_id() == QUEX_FEATURES_LPAREN) {
+                features_lex.receive(&features_token_p);
+                std::vector<int> constituent_properties;
+                while (features_token_p->type_id() == QUEX_FEATURES_IDENTIFIER) {
+                  lookup_iter lookup = 
+                    prop_name_to_id.find(features_token_p->pretty_char_text());
+                  if (lookup == prop_name_to_id.end())
+                    FEATURES_ERROR("Property \""
+                      << features_token_p->pretty_char_text() << "\" not defined.");
+                  constituent_properties.push_back(lookup->second);
+                  features_lex.receive(&features_token_p);
+                  if (features_token_p->type_id() == QUEX_FEATURES_COMBINE)
+                    features_lex.receive(&features_token_p);
+                  else if (features_token_p->type_id() != QUEX_FEATURES_RPAREN)
+                    FEATURES_SYNTAX_ERROR("a hat or a right parenthesis");
+                }
+                if (features_token_p->type_id() != QUEX_FEATURES_RPAREN)
+                  FEATURES_SYNTAX_ERROR("a hat or a right parenthesis");
+                for (vector<int>::const_iterator offset = offsets.begin();
+                 offset != offsets.end(); offset++) {
+                  std::vector< std::pair <int,int> > combined_feature;
+                  for (vector<int>::const_iterator property =
+                   constituent_properties.begin();
+                   property != constituent_properties.end(); property++) {
+                    combined_feature.push_back
+                          (std::make_pair(*offset, *property));
+                  }
+                  combined_features.push_back(combined_feature);
+                }
+                features_lex.receive(&features_token_p);
+                if (features_token_p->type_id() == QUEX_FEATURES_COMMA)
+                  features_lex.receive(&features_token_p);
+                else if (features_token_p->type_id() != QUEX_FEATURES_SEMICOLON)
+                  FEATURES_SYNTAX_ERROR("a comma or a semicolon");
+              }
+            }
+            features.push_back(std::make_pair(offsets, properties));
+          } else if (features_token_p->type_id() == QUEX_FEATURES_LPAREN) {
+            features_lex.receive(&features_token_p); 
+            std::vector< std::pair <int,int> > combined_feature;
+            while (features_token_p->type_id() == QUEX_FEATURES_NUMBER) {
+              int offset = boost::lexical_cast<int>
+                    (features_token_p->pretty_char_text());
+              features_lex.receive(&features_token_p);
+              if (features_token_p->type_id() != QUEX_FEATURES_COLON)
+                FEATURES_SYNTAX_ERROR("a colon");
+              features_lex.receive(&features_token_p);
+              if (features_token_p->type_id() != QUEX_FEATURES_IDENTIFIER)
+                FEATURES_SYNTAX_ERROR("an identifier");
+              lookup_iter lookup = 
+                prop_name_to_id.find(features_token_p->pretty_char_text());
+              if (lookup == prop_name_to_id.end())
+                FEATURES_ERROR("Property \""
+                  << features_token_p->pretty_char_text() << "\" not defined.");
+              int property = atoi(features_token_p->pretty_char_text().c_str());
+              combined_feature.push_back(std::make_pair(offset, property));
+              features_lex.receive(&features_token_p);
+              if (features_token_p->type_id() == QUEX_FEATURES_COMBINE)
+                features_lex.receive(&features_token_p);
+              else if (features_token_p->type_id() != QUEX_FEATURES_RPAREN)
+                FEATURES_SYNTAX_ERROR("a hat or a right parenthesis");
+            }
+            combined_features.push_back(combined_feature);
+            if (features_token_p->type_id() != QUEX_FEATURES_RPAREN)
+              FEATURES_SYNTAX_ERROR("a hat or a right parenthesis");
+          } else if (features_token_p->type_id() != QUEX_FEATURES_TERMINATION)
+            FEATURES_SYNTAX_ERROR("a number or a left parenthesis");
         } while (features_token_p->type_id() != QUEX_FEATURES_TERMINATION);
+        } catch (std::runtime_error) {
+          std::cerr << features_file << ":" << features_lex.line_number()
+            << ":" << features_lex.column_number() << ": Error: "
+            << "Unexpected symbol." << std::endl;
+          return 1;
+        }
 
 tbb::tick_count features_file_parsed_time = tbb::tick_count::now();
 

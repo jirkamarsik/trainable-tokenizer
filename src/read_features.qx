@@ -1,0 +1,30 @@
+header {
+#include <iostream>
+}
+
+token {
+  NUMBER;
+  DOUBLEDOT;
+  COLON;
+  COMMA;
+  SEMICOLON;
+  LPAREN;
+  RPAREN;
+  COMBINE;
+  IDENTIFIER;
+  STAR;
+}
+
+mode FEATURES: <skip: [ \t\r\n]> {
+  [\-\+]?[0-9]+         => QUEX_FEATURES_NUMBER(Lexeme);
+  ".."                  => QUEX_FEATURES_DOUBLEDOT;
+  ":"                   => QUEX_FEATURES_COLON;
+  ","                   => QUEX_FEATURES_COMMA;
+  ";"                   => QUEX_FEATURES_SEMICOLON;
+  "("                   => QUEX_FEATURES_LPAREN;
+  ")"                   => QUEX_FEATURES_RPAREN;
+  "^"                   => QUEX_FEATURES_COMBINE;
+  %?[a-zA-Z0-9_]+       => QUEX_FEATURES_IDENTIFIER(Lexeme);
+  "*"                   => QUEX_FEATURES_STAR;
+  <<EOF>>               => QUEX_FEATURES_TERMINATION;
+}
