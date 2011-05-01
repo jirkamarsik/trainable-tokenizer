@@ -58,6 +58,7 @@ public:
         first_chunk = true;
         for (int i = 0; i < m_window_size; i++) {
           m_window[i].text = "";
+          m_window[i].decision_flags = NO_FLAG;
         }
         m_center_token = 0;
     }
@@ -77,6 +78,8 @@ public:
         delete[] m_window;
     }
 
+    void process_tokens(std::vector<token_t> &tokens, chunk_t *out_chunk_p);
+    void process_center_token(chunk_t *out_chunk_p);
     virtual void* operator()(void *input_p);
 private:
     bool consume_whitespace();

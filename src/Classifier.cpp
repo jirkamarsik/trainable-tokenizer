@@ -1,11 +1,22 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <boost/lexical_cast.hpp>
 
 #include "Classifier.hpp"
 #include "token_t.hpp"
 #include "utils.hpp"
 #include "alignment_exception.hpp"
+
+#define WINDOW_OFFSET(offset) ((m_center_token + offset < 0) ?\
+(((m_center_token + offset) % m_window_size) + m_window_size) :\
+((m_center_token + offset) % m_window_size))
+
+#define CHECK_DECISION_FLAG(flag) {\
+  if (questioned_token.decision_flags & flag##_FLAG) {\
+    context.push_back(std::make_pair(offset_str + "%" #flag, 1.0));\
+  }\
+}
 
 namespace trtok {
 
@@ -31,8 +42,178 @@ void Classifier::report_alignment_warning(std::string occurence_type,
   std::cerr << "         " << advice << std::endl;
 }
 
+void Classifier::process_center_token(chunk_t *out_chunk_p) {
+
+  token_t &center_token = m_window[m_center_token];
+
+  if (center_token.text == "") {
+    return;
+  }
+
+  if ((center_token.decision_flags & MAY_SPLIT_FLAG)
+   || (center_token.decision_flags & MAY_JOIN_FLAG)
+   || (center_token.decision_flags & MAY_BREAK_SENTENCE_FLAG)) {
+
+    int n_defined_properties = center_token.property_flags.size();
+    int length_property = n_defined_properties;
+    int word_property = n_defined_properties + 1;
+
+    std::vector< std::pair<std::string,float> > context;
+    
+    // Simple features
+    for (int offset = -m_precontext; offset != m_postcontext + 1; offset++) {
+      
+      int window_offset = WINDOW_OFFSET(offset);
+      std::string offset_str = boost::lexical_cast<std::string>(offset) + ":";
+      token_t &questioned_token = m_window[window_offset];
+
+      // end of input marks
+      if (questioned_token.text == "") {
+        context.push_back(std::make_pair(
+              offset_str + "%END_OF_INPUT",
+              1.0));
+        continue;
+      }
+      
+      // decision points
+      CHECK_DECISION_FLAG(MAY_SPLIT);
+      CHECK_DECISION_FLAG(MAY_JOIN);
+      CHECK_DECISION_FLAG(MAY_BREAK_SENTENCE);
+
+      // we want to fill out only previous decisions in the context,
+      // as will be the case with real questions
+      if (offset < 0) {
+        CHECK_DECISION_FLAG(DO_SPLIT);
+        CHECK_DECISION_FLAG(DO_JOIN);
+        CHECK_DECISION_FLAG(DO_BREAK_SENTENCE);
+      }
+
+      // whitespace features
+      if (center_token.n_newlines >= 0) {
+        context.push_back(std::make_pair(
+              offset_str + "%WHITESPACE",
+              1.0));
+      }
+      if (center_token.n_newlines >= 1) {
+        context.push_back(std::make_pair(
+              offset_str + "%LINE_BREAK",
+              1.0));
+      }
+      if (center_token.n_newlines >= 2) {
+        context.push_back(std::make_pair(
+              offset_str + "%PARAGRAPH_BREAK",
+              1.0));
+      }
+
+      // user-defined features
+      for (int property = 0; property != n_defined_properties; property++) {
+        if (m_features_map[offset + m_precontext, property]) {
+          context.push_back(std::make_pair(
+              offset_str + m_property_names[property],
+              questioned_token.property_flags[property] ? 1.0 : 0.0));
+        }
+      } 
+
+      // special features
+      if (m_features_map[offset + m_precontext, length_property]) {
+        context.push_back(std::make_pair(
+              offset_str + m_property_names[length_property],
+              questioned_token.text.length()));
+      }
+      if (m_features_map[offset + m_precontext, length_property]) {
+        context.push_back(std::make_pair(
+              offset_str + m_property_names[word_property]
+              + "=" + questioned_token.text,
+              1.0));
+      }
+    }
+
+    // combined features
+    for (std::vector< std::vector< std::pair<int,int> > >::const_iterator
+         combined_feature = m_combined_features.begin();
+         combined_feature != m_combined_features.end();
+         combined_feature++) {
+      
+      std::string feature_string = "";
+      bool crossed_end_of_input = false;
+
+      for (std::vector< std::pair<int,int> >::const_iterator
+           constituent_feature = combined_feature->begin();
+           constituent_feature != combined_feature->end();
+           constituent_feature++) {
+
+        int offset = constituent_feature->first;
+        int window_offset = WINDOW_OFFSET(offset);
+        token_t &questioned_token = m_window[window_offset];
+        std::string offset_str = boost::lexical_cast<std::string>(offset);
+
+        if (questioned_token.text == "") {
+          crossed_end_of_input = true;
+          break;
+        }
+        
+        int property = constituent_feature->second;
+        std::string property_name = m_property_names[property];
+        std::string single_feature_string = offset_str + ":"
+                                          + property_name + "=";
+
+        if (property < n_defined_properties) {
+          single_feature_string +=
+              questioned_token.property_flags[property] ? "1.0" : "0.0";
+        } else if (property == length_property) {
+          single_feature_string +=
+              boost::lexical_cast<std::string>(questioned_token.text.length());
+        } else if (property == word_property) {
+          single_feature_string +=
+              questioned_token.text;
+        }
+
+        if (feature_string != "") {
+          feature_string += "^";
+        }
+        feature_string += single_feature_string;
+      }
+
+      if (!crossed_end_of_input) {
+        context.push_back(std::make_pair(feature_string, 1.0));
+      }
+    }
+
+    std::string true_outcome;
+    std::string predicted_outcome;
+
+    if (center_token.decision_flags & DO_BREAK_SENTENCE_FLAG) {
+      true_outcome = "BREAK_SENTENCE";
+    } else if ((center_token.decision_flags & DO_SPLIT_FLAG)
+           || ((center_token.n_newlines >= 0)
+              && !(center_token.decision_flags & DO_JOIN_FLAG))) {
+      true_outcome = "SPLIT";
+    }
+    else {
+      true_outcome = "JOIN";
+    }
+
+    predicted_outcome = m_model.predict(context);
+
+    m_model.add_event(context, outcome);
+  }
+
+  out_chunk_p->tokens.push_back(center_token);
+}
+
+void Classifier::process_tokens(std::vector<token_t> &tokens,
+                                chunk_t *out_chunk_p) {
+  for (std::vector<token_t>::iterator token = tokens.begin();
+       token != tokens.end(); token++) {
+    m_center_token = WINDOW_OFFSET(1);
+    m_window[WINDOW_OFFSET(m_postcontext)] = *token;
+    process_center_token(out_chunk_p);
+  }
+}
+
+
 void* Classifier::operator()(void* input_p) {
-  chunk_t* chunk_p = (chunk_t*)input_p;
+  chunk_t* in_chunk_p = (chunk_t*)input_p;
 
   // We clean up any leading whitespace from the text
   if (first_chunk)
@@ -41,8 +222,8 @@ void* Classifier::operator()(void* input_p) {
     first_chunk = false;
   }
 
-  for (std::vector<token_t>::iterator token = chunk_p->tokens.begin();
-   token != chunk_p->tokens.end(); token++)
+  for (std::vector<token_t>::iterator token = in_chunk_p->tokens.begin();
+   token != in_chunk_p->tokens.end(); token++)
   {
     std::basic_string<uint32_t> token_text = utf8_to_unicode(token->text);
 
@@ -77,7 +258,7 @@ void* Classifier::operator()(void* input_p) {
 
     // Check for the presence of whitespace/newlines between this and
     // the next token
-    if ((token + 1 != chunk_p->tokens.end()) || !chunk_p->is_final) {
+    if ((token + 1 != in_chunk_p->tokens.end()) || !in_chunk_p->is_final) {
       if (is_whitespace(annot_char)) {
         bool line_break = consume_whitespace();
 
@@ -88,7 +269,7 @@ void* Classifier::operator()(void* input_p) {
           else
             report_alignment_warning("word break",
               token->text,
-              (token + 1 != chunk_p->tokens.end()) ? (token + 1)->text : "",
+              (token + 1 != in_chunk_p->tokens.end()) ? (token + 1)->text : "",
               "Consider adding a tokenization rule to a *.split file.");
         if (line_break)
           if (token->decision_flags & MAY_BREAK_SENTENCE_FLAG)
@@ -97,7 +278,7 @@ void* Classifier::operator()(void* input_p) {
           else
             report_alignment_warning("sentence break",
               token->text,
-              (token + 1 != chunk_p->tokens.end()) ? (token + 1)->text : "",
+              (token + 1 != in_chunk_p->tokens.end()) ? (token + 1)->text : "",
               "Consider adding more sentence terminators or starters.");
       } else {
         if (token->n_newlines >= 0)
@@ -107,20 +288,33 @@ void* Classifier::operator()(void* input_p) {
           else
             report_alignment_warning("joining of words",
               token->text,
-              (token + 1 != chunk_p->tokens.end()) ? (token + 1)->text : "",
+              (token + 1 != in_chunk_p->tokens.end()) ? (token + 1)->text : "",
               "Consider adding a tokenization rule to a *.join file.");
       }
     }
-  } // for (std::vector<token_t>::iterator token = chunk_p->tokens.begin();...
+  } // for (std::vector<token_t>::iterator token = in_chunk_p->tokens.begin();
   
   if (is_whitespace(annot_char)) {
     consume_whitespace();
   }
-  if (chunk_p->is_final && !m_annot_stream_p->eof()) {
+  if (in_chunk_p->is_final && !m_annot_stream_p->eof()) {
     std::cerr << "Warning: Extra text at the end of annotated data.\n";
   }
 
-  return chunk_p;
+  chunk_t *out_chunk_p = new chunk_t;
+  out_chunk_p->is_final = in_chunk_p->is_final;
+
+  process_tokens(in_chunk_p->tokens, out_chunk_p);
+
+  if (out_chunk_p->is_final) {
+    token_t end_token;
+    end_token.text = "";
+    std::vector<token_t> end_tokens(m_postcontext + 1, end_token);
+    process_tokens(end_tokens, out_chunk_p);
+  }
+  
+  delete in_chunk_p;
+  return out_chunk_p;
 }
 
 }

@@ -389,7 +389,7 @@ tbb::tick_count enum_properties_compiled_time = tbb::tick_count::now();
               (features_token_p->pretty_char_text());
         if (right < left)
           FEATURES_ERROR("Interval upper bound lower than lower bound.");
-        for (int offset = left; left <= right; left++) {
+        for (int offset = left; offset <= right; offset++) {
           offsets.push_back(offset);
         }
         features_lex.receive(&features_token_p);
@@ -517,7 +517,7 @@ tbb::tick_count enum_properties_compiled_time = tbb::tick_count::now();
        offset != features_line->first.end();
        offset++) {
         postcontext = max(postcontext, *offset);
-        precontext = -max(precontext, -(*offset));
+        precontext = max(precontext, -(*offset));
       }
     }
 
@@ -530,7 +530,7 @@ tbb::tick_count enum_properties_compiled_time = tbb::tick_count::now();
        constituent_feature != combined_feature->end();
        constituent_feature++) {
         postcontext = max(postcontext, constituent_feature->first);
-        precontext = -max(precontext, -constituent_feature->first);
+        precontext = max(precontext, -constituent_feature->first);
       }
     }
 
@@ -553,7 +553,7 @@ tbb::tick_count enum_properties_compiled_time = tbb::tick_count::now();
          features_line->second.begin();
          property != features_line->second.end();
          property++)
-          features_map[*offset, *property] = true;
+          features_map[*offset + precontext, *property] = true;
       }
     }
 
