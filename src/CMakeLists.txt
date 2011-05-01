@@ -18,6 +18,14 @@ include_directories (${MaxEnt_INCLUDE_DIRS})
 link_directories (${MaxEnt_LIBRARY_DIRS})
 set (LIBS ${LIBS} ${MaxEnt_LIBRARIES})
 
+# MaxEnt may be defining zlib symbols in its headers if it finds the library
+# installed. With gold-style linkers we then have to explicitly link zlib.
+find_package (ZLIB)
+if (ZLIB_FOUND)
+  include_directories (${ZLIB_INCLUDE_DIRS})
+  set (LIBS ${LIBS} ${ZLIB_LIBRARIES})
+endif (ZLIB_FOUND)
+
 find_package (TBB REQUIRED)
 include_directories (${TBB_INCLUDE_DIRS})
 link_directories (${TBB_LIBRARY_DIRS})
@@ -164,7 +172,7 @@ add_executable (trtok ${SRCS})
 # symbols in linked libraries. These platform-specific libraries must
 # therefore be linked manually.
 if (UNIX)
-  set (LIBS ${LIBS} pthread rt)
+  set (LIBS ${LIBS} pthread rt gfortran)
 endif (UNIX)
 
 target_link_libraries (trtok ${LIBS})

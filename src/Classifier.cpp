@@ -112,9 +112,12 @@ void* Classifier::operator()(void* input_p) {
       }
     }
   } // for (std::vector<token_t>::iterator token = chunk_p->tokens.begin();...
-
+  
+  if (is_whitespace(annot_char)) {
+    consume_whitespace();
+  }
   if (chunk_p->is_final && !m_annot_stream_p->eof()) {
-    std::cerr << "Warning: Extra text at the end of annotated data.";
+    std::cerr << "Warning: Extra text at the end of annotated data.\n";
   }
 
   return chunk_p;
