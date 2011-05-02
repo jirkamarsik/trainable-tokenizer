@@ -24,10 +24,10 @@ bool Classifier::consume_whitespace() {
   bool line_break = false;
   do
   {
-    if (annot_char == 0x0A)
+    if (m_annot_char == 0x0A)
       line_break = true;
-    annot_char = get_unicode_from_utf8(m_annot_stream_p);
-  } while (is_whitespace(annot_char) && (m_annot_stream_p->gcount() > 0));
+    m_annot_char = get_unicode_from_utf8(m_annot_stream_p);
+  } while (is_whitespace(m_annot_char) && (m_annot_stream_p->gcount() > 0));
   return line_break;
 }
 
@@ -182,23 +182,59 @@ void Classifier::process_center_token(chunk_t *out_chunk_p) {
     std::string true_outcome;
     std::string predicted_outcome;
 
-    if (center_token.decision_flags & DO_BREAK_SENTENCE_FLAG) {
-      true_outcome = "BREAK_SENTENCE";
-    } else if ((center_token.decision_flags & DO_SPLIT_FLAG)
-           || ((center_token.n_newlines >= 0)
-              && !(center_token.decision_flags & DO_JOIN_FLAG))) {
-      true_outcome = "SPLIT";
-    }
-    else {
-      true_outcome = "JOIN";
+    if ((m_mode == "train") || (m_mode == "evaluate")) {
+      if (center_token.decision_flags & DO_BREAK_SENTENCE_FLAG) {
+        true_outcome = "BREAK_SENTENCE";
+      } else if ((center_token.decision_flags & DO_SPLIT_FLAG)
+             || ((center_token.n_newlines >= 0)
+                && !(center_token.decision_flags & DO_JOIN_FLAG))) {
+        true_outcome = "SPLIT";
+      }
+      else {
+        true_outcome = "JOIN";
+      }
     }
 
-    predicted_outcome = m_model.predict(context);
+    if ((m_mode == "tokenize") || (m_mode == "evaluate")) {
+      predicted_outcome = m_model.predict(context);
+    }
 
-    m_model.add_event(context, outcome);
+    if (m_mode == "prepare") {
+      if (center_token.decision_flags & MAY_SPLIT_FLAG) {
+        center_token.decision_flags = (decision_flags_t)
+              (center_token.decision_flags | DO_SPLIT_FLAG);
+      }
+      if (center_token.decision_flags & MAY_BREAK_SENTENCE_FLAG) {
+        center_token.decision_flags = (decision_flags_t)
+              (center_token.decision_flags | DO_BREAK_SENTENCE_FLAG);
+      }
+    }
+    if (m_mode == "train") {
+      m_model.add_event(context, true_outcome);
+    }
+    else if (m_mode == "tokenize") {
+      if ((predicted_outcome == "BREAK_SENTENCE")
+       && (center_token.decision_flags & MAY_BREAK_SENTENCE_FLAG)) {
+        center_token.decision_flags = (decision_flags_t)
+              (center_token.decision_flags | DO_BREAK_SENTENCE_FLAG);
+      }
+      if (((predicted_outcome == "BREAK_SENTENCE")
+            || (predicted_outcome == "SPLIT"))
+       && (center_token.decision_flags & MAY_SPLIT_FLAG)) {
+        center_token.decision_flags = (decision_flags_t)
+              (center_token.decision_flags | DO_SPLIT_FLAG);
+      } 
+      if ((predicted_outcome == "JOIN")
+       && (center_token.decision_flags & MAY_JOIN_FLAG)) {
+        center_token.decision_flags = (decision_flags_t)
+              (center_token.decision_flags | DO_JOIN_FLAG);
+      }
+    }
   }
 
-  out_chunk_p->tokens.push_back(center_token);
+  if (out_chunk_p != NULL) {
+    out_chunk_p->tokens.push_back(center_token);
+  }
 }
 
 void Classifier::process_tokens(std::vector<token_t> &tokens,
@@ -211,15 +247,12 @@ void Classifier::process_tokens(std::vector<token_t> &tokens,
   }
 }
 
-
-void* Classifier::operator()(void* input_p) {
-  chunk_t* in_chunk_p = (chunk_t*)input_p;
-
+void Classifier::align_chunk_with_solution(chunk_t *in_chunk_p) {
   // We clean up any leading whitespace from the text
-  if (first_chunk)
+  if (m_first_chunk)
   {
     consume_whitespace();
-    first_chunk = false;
+    m_first_chunk = false;
   }
 
   for (std::vector<token_t>::iterator token = in_chunk_p->tokens.begin();
@@ -232,7 +265,7 @@ void* Classifier::operator()(void* input_p) {
       if (m_annot_stream_p->gcount() == 0)
         throw alignment_exception("Annotated data truncated!");
       // An unexpected word break
-      if (is_whitespace(annot_char))
+      if (is_whitespace(m_annot_char))
       {
         bool line_break = consume_whitespace();
 
@@ -248,18 +281,18 @@ void* Classifier::operator()(void* input_p) {
             "Consider adding more sentence terminators or starters.");
       }
       // Different text in the annotated data
-      if (annot_char != token_text[i])
+      if (m_annot_char != token_text[i])
       {
         // TODO: Possibly better error reporting.
         throw alignment_exception("Annotated data mismatch!");
       }
-      annot_char = get_unicode_from_utf8(m_annot_stream_p);
+      m_annot_char = get_unicode_from_utf8(m_annot_stream_p);
     } // for (size_t i = 0; i != token_text.length(); i++)
 
     // Check for the presence of whitespace/newlines between this and
     // the next token
     if ((token + 1 != in_chunk_p->tokens.end()) || !in_chunk_p->is_final) {
-      if (is_whitespace(annot_char)) {
+      if (is_whitespace(m_annot_char)) {
         bool line_break = consume_whitespace();
 
         if (token->n_newlines == -1)
@@ -294,27 +327,42 @@ void* Classifier::operator()(void* input_p) {
     }
   } // for (std::vector<token_t>::iterator token = in_chunk_p->tokens.begin();
   
-  if (is_whitespace(annot_char)) {
+  if (is_whitespace(m_annot_char)) {
     consume_whitespace();
   }
   if (in_chunk_p->is_final && !m_annot_stream_p->eof()) {
     std::cerr << "Warning: Extra text at the end of annotated data.\n";
   }
+}
 
-  chunk_t *out_chunk_p = new chunk_t;
-  out_chunk_p->is_final = in_chunk_p->is_final;
+void* Classifier::operator()(void* input_p) {
+  chunk_t* in_chunk_p = (chunk_t*)input_p;
+
+  if ((m_mode == "train") || (m_mode == "evaluate")) {
+    align_chunk_with_solution(in_chunk_p);
+  }
+
+  chunk_t *out_chunk_p = NULL;
+  if ((m_mode == "tokenize") || (m_mode == "prepare")) {
+    out_chunk_p = new chunk_t;
+    out_chunk_p->is_final = in_chunk_p->is_final;
+  }
 
   process_tokens(in_chunk_p->tokens, out_chunk_p);
 
-  if (out_chunk_p->is_final) {
-    token_t end_token;
-    end_token.text = "";
-    std::vector<token_t> end_tokens(m_postcontext + 1, end_token);
-    process_tokens(end_tokens, out_chunk_p);
+  if ((m_mode == "tokenize") || (m_mode == "prepare")) {
+    if (out_chunk_p->is_final) {
+      token_t end_token;
+      end_token.text = "";
+      std::vector<token_t> end_tokens(m_postcontext + 1, end_token);
+      process_tokens(end_tokens, out_chunk_p);
+    }
+
+    delete in_chunk_p;
+    return out_chunk_p;
+  } else if ((m_mode == "train") || (m_mode == "evaluate")) {
+    delete in_chunk_p;
   }
-  
-  delete in_chunk_p;
-  return out_chunk_p;
 }
 
 }

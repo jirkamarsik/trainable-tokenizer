@@ -560,69 +560,112 @@ tbb::tick_count enum_properties_compiled_time = tbb::tick_count::now();
 tbb::tick_count features_file_parsed_time = tbb::tick_count::now();
 
     // Testing code
-    pipes::pipe my_input_pipe(pipes::pipe::limited_capacity);
-    pipes::opipestream my_input_pipe_to(my_input_pipe);
-    pipes::ipipestream my_input_pipe_from(my_input_pipe);
+    if (s_mode == "train") {
+      pipes::pipe my_input_pipe(pipes::pipe::limited_capacity);
+      pipes::opipestream my_input_pipe_to(my_input_pipe);
+      pipes::ipipestream my_input_pipe_from(my_input_pipe);
 
-    tbb::concurrent_bounded_queue<cutout_t> cutout_queue;
-    TextCleaner cleaner(&my_input_pipe_to, s_encoding, o_hide_xml,
-                        o_expand_entities, o_keep_entities_expanded,
-                        &cutout_queue);
-    cleaner.setup(&std::cin);
+      TextCleaner cleaner(&my_input_pipe_to, s_encoding, o_hide_xml,
+                          o_expand_entities, o_keep_entities_expanded);
+      cleaner.setup(&std::cin);
 
-    RoughTokenizer rough_tok(rough_lexer_wrapper);
-    rough_tok.setup(&my_input_pipe_from, "UTF-8");
+      RoughTokenizer rough_tok(rough_lexer_wrapper);
+      rough_tok.setup(&my_input_pipe_from, "UTF-8");
 
-    FeatureExtractor feature_extractor(n_regular_properties, regex_properties,
-                                       word_to_enum_props);
+      FeatureExtractor feature_extractor(n_regular_properties,
+                                         regex_properties,
+                                         word_to_enum_props);
 
-    std::ifstream* annot_stream = new std::ifstream("annot.txt");
-    Classifier classifier(s_mode, prop_id_to_name, precontext, postcontext,
-                          features_map, combined_features, o_print_questions,
-                          annot_stream);
+      pipes::pipe my_annot_pipe(pipes::pipe::limited_capacity);
+      pipes::opipestream my_annot_pipe_to(my_annot_pipe);
+      pipes::ipipestream my_annot_pipe_from(my_annot_pipe);
+      
+      std::ifstream* annot_stream_p = new std::ifstream("annot.txt");
 
-    pipes::pipe my_output_pipe(pipes::pipe::limited_capacity);
-    pipes::opipestream my_output_pipe_to(my_output_pipe);
-    pipes::ipipestream my_output_pipe_from(my_output_pipe);
-    
-    OutputFormatter formatter(&my_output_pipe_to, o_detokenize,
-                              o_preserve_segments, o_preserve_paragraphs,
-                              &cutout_queue);
+      TextCleaner annot_cleaner(&my_annot_pipe_to, s_encoding, o_hide_xml,
+                                o_expand_entities, o_keep_entities_expanded);
+      annot_cleaner.setup(annot_stream_p);
 
-    Encoder encoder(&my_output_pipe_from, s_encoding);
-    encoder.setup(&std::cout);
-
-    tbb::pipeline my_pipeline;
-    my_pipeline.add_filter(rough_tok);
-    my_pipeline.add_filter(feature_extractor);
-    my_pipeline.add_filter(classifier);
-    my_pipeline.add_filter(formatter);
+      Classifier classifier(s_mode, prop_id_to_name, precontext, postcontext,
+                            features_map, combined_features, o_print_questions,
+                            &my_annot_pipe_from);
 
 
-tbb::tick_count pipeline_initialized_time = tbb::tick_count::now();
+      tbb::pipeline my_pipeline;
+      my_pipeline.add_filter(rough_tok);
+      my_pipeline.add_filter(feature_extractor);
+      my_pipeline.add_filter(classifier);
 
-    boost::thread input_thread(&TextCleaner::do_work, boost::ref(cleaner));
-    boost::thread output_thread(&Encoder::do_work, boost::ref(encoder));
-    my_pipeline.run(WORK_UNIT_COUNT);
-    input_thread.join();
-    output_thread.join();
 
-tbb::tick_count pipeline_finished_time = tbb::tick_count::now();
+      boost::thread input_thread(&TextCleaner::do_work,
+                                 boost::ref(cleaner));
+      boost::thread annot_thread(&TextCleaner::do_work,
+                                 boost::ref(annot_cleaner));
+      my_pipeline.run(WORK_UNIT_COUNT);
+      input_thread.join();
+      annot_thread.join();
 
-    training_parameters_t training_parameters;
-    classifier.train_model(training_parameters,
-                           (build_path / "maxent.model").native());
+      training_parameters_t training_parameters;
+      classifier.train_model(training_parameters,
+                             (build_path / "maxent.model").native());
+
+    } else {
+
+      pipes::pipe my_input_pipe(pipes::pipe::limited_capacity);
+      pipes::opipestream my_input_pipe_to(my_input_pipe);
+      pipes::ipipestream my_input_pipe_from(my_input_pipe);
+
+      tbb::concurrent_bounded_queue<cutout_t> cutout_queue;
+      TextCleaner cleaner(&my_input_pipe_to, s_encoding, o_hide_xml,
+                          o_expand_entities, o_keep_entities_expanded,
+                          &cutout_queue);
+      cleaner.setup(&std::cin);
+
+      RoughTokenizer rough_tok(rough_lexer_wrapper);
+      rough_tok.setup(&my_input_pipe_from, "UTF-8");
+
+      FeatureExtractor feature_extractor(n_regular_properties,
+                                         regex_properties,
+                                         word_to_enum_props);
+
+      Classifier classifier(s_mode, prop_id_to_name, precontext, postcontext,
+                            features_map, combined_features,
+                            o_print_questions);
+      classifier.load_model((build_path / "maxent.model").native());
+
+      pipes::pipe my_output_pipe(pipes::pipe::limited_capacity);
+      pipes::opipestream my_output_pipe_to(my_output_pipe);
+      pipes::ipipestream my_output_pipe_from(my_output_pipe);
+      
+      OutputFormatter formatter(&my_output_pipe_to, o_detokenize,
+                                o_preserve_segments, o_preserve_paragraphs,
+                                &cutout_queue);
+
+      Encoder encoder(&my_output_pipe_from, s_encoding);
+      encoder.setup(&std::cout);
+
+      tbb::pipeline my_pipeline;
+      my_pipeline.add_filter(rough_tok);
+      my_pipeline.add_filter(feature_extractor);
+      my_pipeline.add_filter(classifier);
+      my_pipeline.add_filter(formatter);
+
+
+      boost::thread input_thread(&TextCleaner::do_work, boost::ref(cleaner));
+      boost::thread output_thread(&Encoder::do_work, boost::ref(encoder));
+      my_pipeline.run(WORK_UNIT_COUNT);
+      input_thread.join();
+      output_thread.join();
+    }
 
 tbb::tick_count all_done_time = tbb::tick_count::now();
 
     report_time("Total time",
         (all_done_time - start_time).seconds());
-    report_time("Total init time",
-        (pipeline_initialized_time - start_time).seconds());
-    report_time("Total pipeline time",
-        (pipeline_finished_time - pipeline_initialized_time).seconds());
-    report_time("Total training time",
-        (all_done_time - pipeline_finished_time).seconds());
+    //report_time("Total init time",
+    //    (pipeline_initialized_time - start_time).seconds());
+    //report_time("Total pipeline time",
+    //    (pipeline_finished_time - pipeline_initialized_time).seconds());
     report_time("Parsing options",
         (options_parsed_time - start_time).seconds());
     report_time("Config file lookup",
@@ -638,8 +681,8 @@ tbb::tick_count all_done_time = tbb::tick_count::now();
          regex_properties_compiled_time).seconds());
     report_time("Parsing features file",
         (features_file_parsed_time - enum_properties_compiled_time).seconds());
-    report_time("Pipeline construction",
-        (pipeline_initialized_time - features_file_parsed_time).seconds());
+    //report_time("Pipeline construction",
+    //    (pipeline_initialized_time - features_file_parsed_time).seconds());
 
     lt_dlexit();
 }

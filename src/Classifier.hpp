@@ -50,12 +50,14 @@ public:
               m_annot_stream_p(annot_stream_p)
         {
             m_window = new token_t[m_window_size];
-            m_model.begin_add_event();
+            if (m_mode == "train") {
+              m_model.begin_add_event();
+            }
             reset();
         }
 
     void reset() {
-        first_chunk = true;
+        m_first_chunk = true;
         for (int i = 0; i < m_window_size; i++) {
           m_window[i].text = "";
           m_window[i].decision_flags = NO_FLAG;
@@ -63,9 +65,14 @@ public:
         m_center_token = 0;
     }
 
+    void load_model(std::string const &model_path) {
+      m_model.load(model_path);
+    }
+
     void train_model(training_parameters_t const &training_parameters,
                      std::string const &model_path,
                      bool save_as_binary = false) {
+
       m_model.end_add_event(training_parameters.event_cutoff);
       m_model.train(training_parameters.n_iterations,
                     training_parameters.method_name,
@@ -80,6 +87,7 @@ public:
 
     void process_tokens(std::vector<token_t> &tokens, chunk_t *out_chunk_p);
     void process_center_token(chunk_t *out_chunk_p);
+    void align_chunk_with_solution(chunk_t *in_chunk_p);
     virtual void* operator()(void *input_p);
 private:
     bool consume_whitespace();
@@ -98,8 +106,8 @@ private:
     std::istream *m_annot_stream_p;
 
     // State
-    uint32_t annot_char;
-    bool first_chunk;
+    uint32_t m_annot_char;
+    bool m_first_chunk;
     token_t *m_window;
     int m_center_token;
     maxent::MaxentModel m_model;
