@@ -35,31 +35,35 @@ inline bool is_newline(uint32_t c) {
 }
 
 inline uint32_t utf8char_to_unicode(char const *buffer, size_t &offset) {
-    if (buffer[offset] >> 7 == 0 /*0xxxxxxx*/) {
+    // C++ char type is signed, so we cast the array to uint8_t,
+    // so the values are interpreted as naturals
+    uint8_t *ubuffer = (uint8_t*)buffer;
+
+    if (ubuffer[offset] >> 7 == 0 /*0xxxxxxx*/) {
         // An ASCII singleton.
-        uint32_t codepoint = buffer[offset];
+        uint32_t codepoint = ubuffer[offset];
         offset++;
         return codepoint;
-    } else if (buffer[offset] >> 5 == 6 /*110xxxxx*/) {
+    } else if (ubuffer[offset] >> 5 == 6 /*110xxxxx*/) {
         // A two-byte sequence
-        uint32_t msb = buffer[offset] & 31 /*last 5 bits*/;
-        uint32_t lsb = buffer[offset+1] & 63 /*last 6 bits*/;
+        uint32_t msb = ubuffer[offset] & 31 /*last 5 bits*/;
+        uint32_t lsb = ubuffer[offset+1] & 63 /*last 6 bits*/;
         uint32_t codepoint = (msb << 6) | lsb;
         offset += 2;
         return codepoint;
-    } else if (buffer[offset] >> 4 == 14 /*1110xxxx*/) {
+    } else if (ubuffer[offset] >> 4 == 14 /*1110xxxx*/) {
         // A three-byte sequence
-        uint32_t msb = buffer[offset] & 15 /*last 4 bits*/;
-        uint32_t smsb = buffer[offset+1] & 63;
-        uint32_t lsb = buffer[offset+2] & 63;
+        uint32_t msb = ubuffer[offset] & 15 /*last 4 bits*/;
+        uint32_t smsb = ubuffer[offset+1] & 63;
+        uint32_t lsb = ubuffer[offset+2] & 63;
         offset += 3;
         return (msb << 12) | (smsb << 6) | lsb;
-    } else if (buffer[offset] >> 3 == 30 /*11110xxx*/) {
+    } else if (ubuffer[offset] >> 3 == 30 /*11110xxx*/) {
         // A four-byte sequence
-        uint32_t msb = buffer[offset] & 7; /*last 3 bits*/
-        uint32_t smsb = buffer[offset+1] & 63;
-        uint32_t slsb = buffer[offset+2] & 63;
-        uint32_t lsb = buffer[offset+3] & 63;
+        uint32_t msb = ubuffer[offset] & 7; /*last 3 bits*/
+        uint32_t smsb = ubuffer[offset+1] & 63;
+        uint32_t slsb = ubuffer[offset+2] & 63;
+        uint32_t lsb = ubuffer[offset+3] & 63;
         offset += 4;
         return (msb << 18) | (smsb << 12) | (slsb << 6) | lsb;
     } else {
@@ -80,16 +84,21 @@ inline std::basic_string<uint32_t> utf8_to_unicode(std::string const &str) {
 }
 
 inline uint32_t get_unicode_from_utf8(std::istream *input_stream_p) {
+    // We use the char-typed pointer to interface with the STL
+    // IOstreams and the uint8_t pointer to interpret the values
+    // as naturals in our code
     char buffer[4];
+    uint8_t  *ubuffer = (uint8_t*)buffer;
+
     size_t offset = 0;
     input_stream_p->get(buffer[0]);
     if (input_stream_p->gcount() == 0)
         return 0;
-    if (buffer[0] >= 192) // 11xxxxxx => at least two bytes
+    if (ubuffer[0] >= 192) // 11xxxxxx => at least two bytes
         input_stream_p->get(buffer[1]);
-    if (buffer[0] >= 224) // 111xxxxx => at least three bytes
+    if (ubuffer[0] >= 224) // 111xxxxx => at least three bytes
         input_stream_p->get(buffer[2]);
-    if (buffer[0] >= 240) // 1111xxxx => four bytes
+    if (ubuffer[0] >= 240) // 1111xxxx => four bytes
         input_stream_p->get(buffer[3]);
     return utf8char_to_unicode(buffer, offset);
 }
