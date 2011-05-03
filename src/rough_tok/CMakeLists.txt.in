@@ -5,6 +5,8 @@ project (RoughLexer)
 set (CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "$ENV{TRTOK_PATH}/code")
 set (LIBS)
 
+set (BUILD_TYPE "Debug")
+
 find_package (LIBICONV)
 find_package (ICU)
 

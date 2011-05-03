@@ -1,4 +1,6 @@
 #include <vector>
+#include <boost/cstdint.hpp>
+typedef boost::uint8_t uint8_t;
 
 #include "OutputFormatter.hpp"
 #include "token_t.hpp"
@@ -8,7 +10,7 @@ namespace trtok {
 
 void* OutputFormatter::operator() (void *input_p) {
   if (!m_have_cutout) {
-    m_cutout_queue_p->pop(m_last_cutout );
+    m_cutout_queue_p->pop(m_last_cutout);
     m_have_cutout = true;
   }
 
@@ -21,7 +23,9 @@ void* OutputFormatter::operator() (void *input_p) {
     bool replacing_entity = false;
     typedef std::string::const_iterator char_iter;
     for (char_iter ch = token->text.begin(); ch != token->text.end(); ch++) {
-      if (*ch >> 6 == 2) {
+      // Chars are signed, so we cast them to uint8_t for our purposes
+      uint8_t uchar = (uint8_t)(*ch);
+      if (uchar >> 6 == 2) {
         // A continuation byte in UTF-8.
         if (!replacing_entity) {
           // Write the character, but only if it won't
@@ -40,7 +44,7 @@ void* OutputFormatter::operator() (void *input_p) {
           *m_output_stream_p << m_last_cutout.text;
           replacing_entity = true;
         }
-        m_cutout_queue_p->pop(m_last_cutout );
+        m_cutout_queue_p->pop(m_last_cutout);
       }
       if (!replacing_entity) {
         // Write the character, but only if it won't
