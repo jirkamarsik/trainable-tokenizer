@@ -75,6 +75,9 @@ bool path_compare(fs::path const &a, fs::path const &b) {
   return 1;\
 }
 
+#define FEATURES_MAP(offset, property)\
+  features_map[offset * (precontext + 1 + postcontext) + property]
+
 void report_time(char const *description, double seconds) {
   std::clog << description << ": " << seconds << "s" << std::endl;
 }
@@ -535,10 +538,10 @@ tbb::tick_count enum_properties_compiled_time = tbb::tick_count::now();
     }
 
     bool *features_map =
-        new bool[precontext + 1 + postcontext, n_properties];
+          new bool [(precontext + 1 + postcontext) * n_properties];
     for (int i = 0; i < precontext + 1 + postcontext; i++) {
       for (int j = 0; j < n_properties; j++) {
-        features_map[i,j] = false;
+        FEATURES_MAP(i,j) = false;
       }
     }
 
@@ -553,7 +556,7 @@ tbb::tick_count enum_properties_compiled_time = tbb::tick_count::now();
          features_line->second.begin();
          property != features_line->second.end();
          property++)
-          features_map[*offset + precontext, *property] = true;
+          FEATURES_MAP(*offset + precontext, *property) = true;
       }
     }
 

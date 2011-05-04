@@ -47,7 +47,8 @@ public:
               m_features_map(features_map),
               m_combined_features(combined_features),
               m_print_questions(print_questions),
-              m_annot_stream_p(annot_stream_p)
+              m_annot_stream_p(annot_stream_p),
+              m_n_events_registered(0)
         {
             m_window = new token_t[m_window_size];
             if (m_mode == "train") {
@@ -74,10 +75,12 @@ public:
                      bool save_as_binary = false) {
 
       m_model.end_add_event(training_parameters.event_cutoff);
-      m_model.train(training_parameters.n_iterations,
-                    training_parameters.method_name,
-                    training_parameters.smoothing_coefficient,
-                    training_parameters.convergence_tolerance);
+      if (m_n_events_registered > 0) {
+        m_model.train(training_parameters.n_iterations,
+                      training_parameters.method_name,
+                      training_parameters.smoothing_coefficient,
+                      training_parameters.convergence_tolerance);
+      }
       m_model.save(model_path, save_as_binary);
     }
 
@@ -111,6 +114,7 @@ private:
     token_t *m_window;
     int m_center_token;
     maxent::MaxentModel m_model;
+    int m_n_events_registered;
 };
 
 }

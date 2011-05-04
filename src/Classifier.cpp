@@ -18,6 +18,9 @@
   }\
 }
 
+#define FEATURES_MAP(offset, property)\
+  m_features_map[offset * m_window_size + property]
+
 namespace trtok {
 
 bool Classifier::consume_whitespace() {
@@ -107,7 +110,7 @@ void Classifier::process_center_token(chunk_t *out_chunk_p) {
 
       // user-defined features
       for (int property = 0; property != n_defined_properties; property++) {
-        if (m_features_map[offset + m_precontext, property]) {
+        if (FEATURES_MAP(offset + m_precontext, property)) {
           context.push_back(std::make_pair(
               offset_str + m_property_names[property],
               questioned_token.property_flags[property] ? 1.0 : 0.0));
@@ -115,12 +118,12 @@ void Classifier::process_center_token(chunk_t *out_chunk_p) {
       } 
 
       // special features
-      if (m_features_map[offset + m_precontext, length_property]) {
+      if (FEATURES_MAP(offset + m_precontext, length_property)) {
         context.push_back(std::make_pair(
               offset_str + m_property_names[length_property],
               questioned_token.text.length()));
       }
-      if (m_features_map[offset + m_precontext, length_property]) {
+      if (FEATURES_MAP(offset + m_precontext, word_property)) {
         context.push_back(std::make_pair(
               offset_str + m_property_names[word_property]
               + "=" + questioned_token.text,
@@ -211,6 +214,7 @@ void Classifier::process_center_token(chunk_t *out_chunk_p) {
     }
     if (m_mode == "train") {
       m_model.add_event(context, true_outcome);
+      m_n_events_registered++;
     }
     else if (m_mode == "tokenize") {
       if ((predicted_outcome == "BREAK_SENTENCE")
@@ -350,19 +354,15 @@ void* Classifier::operator()(void* input_p) {
 
   process_tokens(in_chunk_p->tokens, out_chunk_p);
 
-  if ((m_mode == "tokenize") || (m_mode == "prepare")) {
-    if (out_chunk_p->is_final) {
-      token_t end_token;
-      end_token.text = "";
-      std::vector<token_t> end_tokens(m_postcontext + 1, end_token);
-      process_tokens(end_tokens, out_chunk_p);
-    }
-
-    delete in_chunk_p;
-    return out_chunk_p;
-  } else if ((m_mode == "train") || (m_mode == "evaluate")) {
-    delete in_chunk_p;
+  if (in_chunk_p->is_final) {
+    token_t end_token;
+    end_token.text = "";
+    std::vector<token_t> end_tokens(m_postcontext + 1, end_token);
+    process_tokens(end_tokens, out_chunk_p);
   }
+
+  delete in_chunk_p;
+  return out_chunk_p;
 }
 
 }
