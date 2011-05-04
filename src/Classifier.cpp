@@ -315,7 +315,10 @@ void Classifier::align_chunk_with_solution(chunk_t *in_chunk_p) {
           else
             report_alignment_warning("sentence break",
               token->text,
-              (token + 1 != in_chunk_p->tokens.end()) ? (token + 1)->text : "",
+              (token + 1 != in_chunk_p->tokens.end()) ?
+                (token + 1)->text +
+                  (token->n_newlines >= 1 ? "(preceded by a line break)" : "")
+                : "",
               "Consider adding more sentence terminators or starters.");
       } else {
         if (token->n_newlines >= 0)
