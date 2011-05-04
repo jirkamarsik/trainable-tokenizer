@@ -76,7 +76,7 @@ bool path_compare(fs::path const &a, fs::path const &b) {
 }
 
 #define FEATURES_MAP(offset, property)\
-  features_map[(offset) * (precontext + 1 + postcontext) + property]
+  features_map[(offset) * n_properties + property]
 
 void report_time(char const *description, double seconds) {
   std::clog << description << ": " << seconds << "s" << std::endl;

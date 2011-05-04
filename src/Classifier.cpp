@@ -19,7 +19,7 @@
 }
 
 #define FEATURES_MAP(offset, property)\
-  m_features_map[offset * m_window_size + property]
+  m_features_map[offset * (n_defined_properties + 2) + property]
 
 namespace trtok {
 
