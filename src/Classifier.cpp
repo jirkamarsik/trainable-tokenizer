@@ -23,27 +23,6 @@
 
 namespace trtok {
 
-bool Classifier::consume_whitespace() {
-  bool line_break = false;
-  do
-  {
-    if (m_annot_char == 0x0A)
-      line_break = true;
-    m_annot_char = get_unicode_from_utf8(m_annot_stream_p);
-  } while (is_whitespace(m_annot_char) && (m_annot_stream_p->gcount() > 0));
-  return line_break;
-}
-
-void Classifier::report_alignment_warning(std::string occurence_type,
-    std::string prefix, std::string suffix, std::string advice) {
-  std::cerr << "Warning: Unexpected " << occurence_type
-    << " encountered in annotated data." << std::endl;
-  std::cerr << "         Prefix=" << prefix;
-  if (suffix != "")
-    std::cerr << " Suffix=" << suffix;
-  std::cerr << std::endl;
-  std::cerr << "         " << advice << std::endl;
-}
 
 void Classifier::process_center_token(chunk_t *out_chunk_p) {
 
@@ -212,7 +191,7 @@ void Classifier::process_center_token(chunk_t *out_chunk_p) {
               (center_token.decision_flags | DO_BREAK_SENTENCE_FLAG);
       }
     }
-    if (m_mode == "train") {
+    else if (m_mode == "train") {
       m_model.add_event(context, true_outcome);
       m_n_events_registered++;
     }
@@ -234,12 +213,40 @@ void Classifier::process_center_token(chunk_t *out_chunk_p) {
               (center_token.decision_flags | DO_JOIN_FLAG);
       }
     }
+
+    if (m_qa_stream_p != NULL) {
+
+      std::string context_string = "";
+
+      for (std::vector< std::pair<std::string,float> >::const_iterator
+           feature = context.begin(); feature != context.end(); feature++) {
+        if (context_string != "")
+          context_string += "; ";
+        context_string += feature->first
+                + "=" + boost::lexical_cast<std::string>(feature->second);
+      }
+
+      std::string outcome_string;
+      if (m_mode == "prepare") {
+        outcome_string = "";
+      } else if (m_mode == "tokenize") {
+        outcome_string = predicted_outcome;
+      } else if (m_mode == "train") {
+        outcome_string = true_outcome;
+      } else if (m_mode == "evaluate") {
+        outcome_string = predicted_outcome + "/" + true_outcome;
+      }
+
+      *m_qa_stream_p << m_processed_filename << '|' << outcome_string
+                     << '|' << context_string << std::endl;
+    }
   }
 
   if (out_chunk_p != NULL) {
     out_chunk_p->tokens.push_back(center_token);
   }
 }
+
 
 void Classifier::process_tokens(std::vector<token_t> &tokens,
                                 chunk_t *out_chunk_p) {
@@ -249,6 +256,31 @@ void Classifier::process_tokens(std::vector<token_t> &tokens,
     m_window[WINDOW_OFFSET(m_postcontext)] = *token;
     process_center_token(out_chunk_p);
   }
+}
+
+
+
+
+bool Classifier::consume_whitespace() {
+  bool line_break = false;
+  do
+  {
+    if (m_annot_char == 0x0A)
+      line_break = true;
+    m_annot_char = get_unicode_from_utf8(m_annot_stream_p);
+  } while (is_whitespace(m_annot_char) && (m_annot_stream_p->gcount() > 0));
+  return line_break;
+}
+
+void Classifier::report_alignment_warning(std::string occurence_type,
+    std::string prefix, std::string suffix, std::string advice) {
+  std::cerr << "Warning: Unexpected " << occurence_type
+    << " encountered in annotated data." << std::endl;
+  std::cerr << "         Prefix=" << prefix;
+  if (suffix != "")
+    std::cerr << " Suffix=" << suffix;
+  std::cerr << std::endl;
+  std::cerr << "         " << advice << std::endl;
 }
 
 void Classifier::align_chunk_with_solution(chunk_t *in_chunk_p) {
@@ -341,6 +373,8 @@ void Classifier::align_chunk_with_solution(chunk_t *in_chunk_p) {
     std::cerr << "Warning: Extra text at the end of annotated data.\n";
   }
 }
+
+
 
 void* Classifier::operator()(void* input_p) {
   chunk_t* in_chunk_p = (chunk_t*)input_p;

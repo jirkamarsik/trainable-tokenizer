@@ -11,6 +11,13 @@ typedef boost::uint32_t uint32_t;
 
 namespace trtok {
 
+enum classifier_mode_t {
+  PREPARE_MODE,
+  TRAIN_MODE,
+  TOKENIZE_MODE,
+  EVALUATE_MODE
+};
+
 struct training_parameters_t {
   size_t event_cutoff;
   size_t n_iterations;
@@ -30,14 +37,14 @@ struct training_parameters_t {
 class Classifier: public tbb::filter {
 public:
     Classifier(
-           std::string mode,
+           classifier_mode_t mode,
            std::vector<std::string> const &property_names,
            int precontext,
            int postcontext,
            bool *features_map,
            std::vector< std::vector< std::pair<int,int> > > combined_features,
-           bool print_questions,
-           std::istream *annot_stream_p = NULL):
+           std::istream *annot_stream_p = NULL,
+           std::ostream *qa_stream_p = NULL):
               tbb::filter(tbb::filter::serial_in_order),
               m_mode(mode),
               m_property_names(property_names),
@@ -46,16 +53,21 @@ public:
               m_window_size(precontext + 1 + postcontext),
               m_features_map(features_map),
               m_combined_features(combined_features),
-              m_print_questions(print_questions),
               m_annot_stream_p(annot_stream_p),
+              m_qa_stream_p(qa_stream_p),
               m_n_events_registered(0)
-        {
-            m_window = new token_t[m_window_size];
-            if (m_mode == "train") {
-              m_model.begin_add_event();
-            }
-            reset();
+    {
+        m_window = new token_t[m_window_size];
+        if (m_mode == "train") {
+          m_model.begin_add_event();
         }
+        reset();
+    }
+
+    void setup(std::string processed_filename) {
+        m_processed_filename = processed_filename;
+        reset();
+    }
 
     void reset() {
         m_first_chunk = true;
@@ -98,15 +110,16 @@ private:
     std::string prefix, std::string suffix, std::string advice);
 private:
     // Configuration
-    std::string m_mode;
+    classifier_mode_t m_mode;
     std::vector<std::string> m_property_names;
     int m_precontext;
     int m_postcontext;
     int m_window_size;
     bool *m_features_map;
     std::vector< std::vector< std::pair<int,int> > > m_combined_features;
-    bool m_print_questions;
+    std::ostream *m_qa_stream_p;
     std::istream *m_annot_stream_p;
+    std::string m_processed_filename;
 
     // State
     uint32_t m_annot_char;
