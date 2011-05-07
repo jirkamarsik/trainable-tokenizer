@@ -29,6 +29,7 @@
 #include "read_features_file.hpp"
 #include "FeatureExtractor.hpp"
 #include "Classifier.hpp"
+#include "SimplePreparer.hpp"
 #include "OutputFormatter.hpp"
 #include "Encoder.hpp"
 
@@ -36,6 +37,16 @@ using namespace std;
 using namespace trtok;
 namespace po = boost::program_options;
 namespace fs = boost::filesystem;
+
+#define END_WITH_ERROR(location, message) {\
+  std::cerr << location << ": Error: " << message << std::endl;\
+  return 1;\
+}
+
+// A 2D-array accessor for the feature selection mask
+#define FEATURES_MASK(offset, property)\
+  features_mask[(offset) * n_properties + property]
+
 
 /* A comparison function used later.
  * Compares paths first by filename then by path length */
@@ -53,15 +64,16 @@ bool path_compare(fs::path const &a, fs::path const &b) {
     }
 }
 
-#define END_WITH_ERROR(location, message) {\
-  std::cerr << location << ": Error: " << message << std::endl;\
-  return 1;\
+void include_listed_files(fs::path const &file_list_path,
+                          vector<string> &input_files) {
+    fs::ifstream file_list(file_list_path);
+    string line;
+    while (getline(file_list, line)) {
+      if (line.size() > 0)
+        input_files.push_back(line);
+    }
+    file_list.close();
 }
-
-
-// A 2D-array accessor for the feature selection mask
-#define FEATURES_MASK(offset, property)\
-  features_mask[(offset) * n_properties + property]
 
 
 int main(int argc, char const **argv) {
@@ -102,7 +114,7 @@ int main(int argc, char const **argv) {
         "specified.")
       ("filename-regexp,r",
           po::value<string>(&s_filename_regexp)
-                           ->default_value("(.*)\\.txt/\1.tok"),
+                           ->default_value("/(.*)\\.txt/\1.tok/"),
         "A regular expression/replacement string used to generate a set of "
         "pairs of input/output files. Output files are written to in TOKENIZE "
         "mode and are used as correct answers in TRAIN and EVALUATE modes. If "
@@ -165,16 +177,9 @@ int main(int argc, char const **argv) {
     try {
         po::store(cmd_line.run(), vm);
         po::notify(vm);
-    } catch (po::unknown_option const &exc) {
-        END_WITH_ERROR("trtok", "Encountered unknown option "
-                                << exc.get_option_name() << ". "
+    } catch (po::error const &exc) {
+        END_WITH_ERROR("trtok", exc.what() << 
                                 "See trtok --help for proper usage.");
-    } catch (po::required_option const &exc) {
-        END_WITH_ERROR("trtok", "Missing mandatory parameter "
-                                << exc.get_option_name() << ". "
-                                "See trtok --help for proper usage.");
-    } catch (po::too_many_positional_options_error const &exc) {
-        END_WITH_ERROR("trtok", "Too many arguments. See 'trtok --help'.");
     }
 
 
@@ -186,13 +191,13 @@ int main(int argc, char const **argv) {
     }
 
     classifier_mode_t mode;
-    if ((s_mode == "prepare") || (s_mode == "PREPARE")) {
+    if (s_mode == "prepare") {
       mode = PREPARE_MODE;
-    } else if ((s_mode == "train") || (s_mode == "TRAIN")) {
+    } else if (s_mode == "train") {
       mode = TRAIN_MODE;
-    } else if ((s_mode == "tokenize") || (s_mode == "TOKENIZE")) {
+    } else if (s_mode == "tokenize") {
       mode = TOKENIZE_MODE;
-    } else if ((s_mode == "evaluate") || (s_mode == "EVALUATE")) {
+    } else if (s_mode == "evaluate") {
       mode = EVALUATE_MODE;
     } else {
       END_WITH_ERROR("trtok", "Mode " + s_mode + " not recognized. Supported "
@@ -281,25 +286,16 @@ int main(int argc, char const **argv) {
      * If case folding is implented in the future, it might be feasible to
      * make the extensions completely case-insensitive. */
     vector<fs::path> split_files, join_files, begin_files, end_files,
-                     enump_files, rep_files, fl_files, fnre_files;
+                     enump_files, rep_files;
     fs::path features_file, maxentparams_file;
+    fs::path default_file_list, default_fnre_file;
     boost::unordered_map< string, vector<fs::path>* > file_vectors;
     file_vectors[".split"] = &split_files;
-    file_vectors[".SPLIT"] = &split_files;
     file_vectors[".join"] = &join_files;
-    file_vectors[".JOIN"] = &join_files;
     file_vectors[".begin"] = &begin_files;
-    file_vectors[".BEGIN"] = &begin_files;
     file_vectors[".end"] = &end_files;
-    file_vectors[".END"] = &end_files;
     file_vectors[".enump"] = &enump_files;
-    file_vectors[".ENUMP"] = &enump_files;
     file_vectors[".rep"] = &rep_files;
-    file_vectors[".REP"] = &rep_files;
-    file_vectors[".fl"] = &fl_files;
-    file_vectors[".FL"] = &fl_files;
-    file_vectors[".fnre"] = &fnre_files;
-    file_vectors[".FNRE"] = &fnre_files;
 
     /* When we encounter two paths with the same filename, we take the former.
      * The following "duplicates" are guaranteed to be less specific, because
@@ -316,15 +312,13 @@ int main(int argc, char const **argv) {
         lookup = file_vectors.find(file->extension().string());
       if (lookup != file_vectors.end()) {
           lookup->second->push_back(*file);
-      }
-      else if (((file->filename() == "features")
-             || (file->filename() == "FEATURES"))
-            && (features_file.empty())) {
+      } else if ((file->extension() == ".fl") && (file->stem() == s_mode)) {
+          default_file_list = *file;
+      } else if ((file->extension() == ".fnre") && (file->stem() == s_mode)) {
+          default_fnre_file = *file;
+      } else if (file->filename() == "features") {
           features_file = *file;
-      }
-      else if (((file->filename() == "maxent.params")
-             || (file->filename() == "MAXENT.PARAMS"))
-            && (maxentparams_file.empty())) {
+      } else if (file->filename() == "maxent.params")  {
           maxentparams_file = *file;
       }
       last_filename = file->filename().string();
@@ -401,6 +395,7 @@ int main(int argc, char const **argv) {
               "line in regex property definition file.");
           }
       }
+      regex_file.close();
 
       // compile ...
       pcrecpp::RE regex(regex_string, PCRE_UTF8 | PCRE_UCP);
@@ -411,6 +406,10 @@ int main(int argc, char const **argv) {
       regex_properties.push_back(regex);
 
       // and register.
+      if (prop_name_to_id.count(file->stem().string()) > 0) {
+        END_WITH_ERROR(*file, "Property " << file->stem() << " defined twice "
+            "(both as a regex property and an enumerated property).");
+      }
       prop_name_to_id[file->stem().string()] = n_properties;
       prop_id_to_name.push_back(file->stem().string());
       n_properties++;
@@ -430,8 +429,13 @@ int main(int argc, char const **argv) {
           continue;
         word_to_enum_props.insert(make_pair(line, n_properties));
       }
+      enum_file.close();
 
       // and register the property.
+      if (prop_name_to_id.count(file->stem().string()) > 0) {
+        END_WITH_ERROR(*file, "Property " << file->stem() << " defined twice "
+            "(both as a regex property and an enumerated property).");
+      }
       prop_name_to_id[file->stem().string()] = n_properties;
       prop_id_to_name.push_back(file->stem().string());
       n_properties++;
@@ -439,10 +443,18 @@ int main(int argc, char const **argv) {
     }
 
     // Finally we add the two "builtin" properties.
+    if (prop_name_to_id.count("%length") > 0) {
+      END_WITH_ERROR("*/%length.[rep|enump]",
+          "'%length' is a reserved property name.");
+    }
     prop_name_to_id["%length"] = n_properties;
     prop_id_to_name.push_back("%length");
     n_properties++;
 
+    if (prop_name_to_id.count("%Word") > 0) {
+      END_WITH_ERROR("*/%Word.[rep|enump]",
+          "'%Word' is a reserved property name.");
+    }
     prop_name_to_id["%Word"] = n_properties;
     prop_id_to_name.push_back("%Word");
     n_properties++;
@@ -471,105 +483,352 @@ int main(int argc, char const **argv) {
       return read_features_exit_code;
     }
 
+    vector<string> input_files;
+
+    // The files explicitly stated on the command line are to be processed
+    // everytime. If a file named '-' was given, the standard input/output
+    // combo is used.
+    for (vector<string>::const_iterator file = sv_input_files.begin();
+         file != sv_input_files.end(); file++) {
+
+      fs::path file_path(*file);
+
+      if (!fs::exists(file_path) && (file_path != "-")) {
+        END_WITH_ERROR(*file, "File not found.");
+      }
+
+      input_files.push_back(*file);
+    }
+
+    // If we were given any explicit file list, we include all the files
+    // referred inside it.
+    for (vector<string>::const_iterator file_list = sv_file_lists.begin();
+         file_list != sv_file_lists.end(); file_list++) {
+
+      fs::path file_list_path(*file_list);
+
+      if (!fs::exists(file_list_path)) {
+        END_WITH_ERROR(*file_list, "File not found.");
+      }
+
+      include_listed_files(file_list_path, input_files);
+    }
+
+    // If no files or file lists were given explicitly, we check for
+    // a .fl file with a default file list.
+    if ((input_files.size() == 0) && !default_file_list.empty()) {
+      include_listed_files(default_file_list, input_files);
+    }
+
+    // If no input files or file lists were given or set up as default
+    // by the user, then we process standard input.
+    if (input_files.size() == 0) {
+      input_files.push_back("-");
+    }
     
-    // Testing code
-    if (s_mode == "train") {
-      pipes::pipe my_input_pipe(pipes::pipe::limited_capacity);
-      pipes::opipestream my_input_pipe_to(my_input_pipe);
-      pipes::ipipestream my_input_pipe_from(my_input_pipe);
+    // If no filename-regexp was given, we check for the presence of a
+    // .fnre file and use its contents instead of the default.
+    if (vm["filename-regexp"].defaulted() && !default_fnre_file.empty()) {
 
-      TextCleaner cleaner(&my_input_pipe_to, s_encoding, o_hide_xml,
-                          o_expand_entities, o_keep_entities_expanded);
-      cleaner.setup(&std::cin);
+      fs::ifstream fnre_file(default_fnre_file);
 
-      RoughTokenizer rough_tok(rough_lexer_wrapper);
-      rough_tok.setup(&my_input_pipe_from, "UTF-8");
+      string line;
+      string retrieved = "";
+      while (getline(fnre_file, line)) {
+        if (line.size() > 0) {
+          if (retrieved == "") {
+            retrieved = line;
+          } else {
+            END_WITH_ERROR(default_fnre_file, "More than 1 nonempty line in "
+            "file.");
+          }
+        }
+      }
+      if (retrieved == "") {
+        END_WITH_ERROR(default_fnre_file, "File is empty.");
+      }
+      s_filename_regexp = retrieved;
 
-      FeatureExtractor feature_extractor(n_basic_properties,
-                                         regex_properties,
-                                         word_to_enum_props);
+      fnre_file.close();
+    }
 
-      pipes::pipe my_annot_pipe(pipes::pipe::limited_capacity);
-      pipes::opipestream my_annot_pipe_to(my_annot_pipe);
-      pipes::ipipestream my_annot_pipe_from(my_annot_pipe);
+    // Decomposition of the regexp/replacement string combo.
+    char delimiter = s_filename_regexp[0];
+
+    size_t second_delimiter_pos = s_filename_regexp.find(delimiter, 1);
+    if (second_delimiter_pos == string::npos) {
+      END_WITH_ERROR(
+          (vm["filename-regexp"].defaulted() ? default_fnre_file : "trtok"),
+          "Delimiter in the filename regexp/replacement string found only at "
+          "the start. Make sure the first character of the regex/replacement "
+          "string is used to terminate the regex and the replacement string "
+          "(as in sed, e.g. /change_this/into_this/).");
+    }
+
+    size_t third_delimiter_pos =
+            s_filename_regexp.find(delimiter, second_delimiter_pos + 1);
+    if (third_delimiter_pos != s_filename_regexp.size() - 1) {
+      END_WITH_ERROR(
+          (vm["filename-regexp"].defaulted() ? default_fnre_file : "trtok"),
+          "Delimiter in the filename regexp/replacement string not found at "
+          "the end. Make sure the first character of the regex/replacement "
+          "string is used to terminate the regex and the replacement string "
+          "(as in sed, e.g. /change_this/into_this/).");
+    }
+
+    // The product: fnre_regexp, fnre_replace
+    pcrecpp::RE fnre_regexp(
+                    s_filename_regexp.substr(1, second_delimiter_pos - 1),
+                    PCRE_UTF8 | PCRE_UCP);
+    string fnre_replace = s_filename_regexp.substr(second_delimiter_pos + 1,
+                          third_delimiter_pos - (second_delimiter_pos + 1));
+
+    if (fnre_regexp.error() != "") {
+      END_WITH_ERROR(
+          (vm["filename-regexp"].defaulted() ? default_fnre_file : "trtok"),
+          "The following error occured when compiling the regular expression: "
+          << fnre_regexp.error());
+    }
+    
+    // This is the file in which the trained maxent model for this tokenization
+    // scheme is stored.
+    fs::path model_path = build_path / "maxent.model";
+
+    // If a questions/answers file was requested, we create a stream to one.
+    // If we are in the EVALUATE_MODE, we always want to output questions
+    // and answers.
+    std::ostream *qa_stream_p = NULL;
+    if (!vm["questions"].defaulted() || (mode == EVALUATE_MODE)) {
+      if (s_qa_file == "-") {
+        qa_stream_p = &std::cout;
+      } else {
+        qa_stream_p = new std::ofstream(s_qa_file.c_str());
+      }
+    }
+
+    // PARSING THE TRAINING PARAMETERS
+    training_parameters_t training_parameters;
+    if ((mode == TRAIN_MODE) && !maxentparams_file.empty()) {
+
+      fs::ifstream maxentparams_stream(maxentparams_file);
+
+      po::options_description training_options;
+      training_options.add_options()
+          ("event_cutoff",
+              po::value<size_t>(&training_parameters.event_cutoff))
+          ("n_iterations",
+              po::value<size_t>(&training_parameters.n_iterations))
+          ("method_name",
+              po::value<string>(&training_parameters.method_name))
+          ("smoothing_coefficient",
+              po::value<double>(&training_parameters.smoothing_coefficient))
+          ("convergence_tolerance",
+              po::value<double>(&training_parameters.convergence_tolerance))
+          ;
+
+      po::variables_map maxent_vm;
+      po::store(po::parse_config_file(maxentparams_stream, training_options),
+                maxent_vm);
+      po::notify(maxent_vm);
+
+      maxentparams_stream.close();
+    }
+
+    // CONSTRUCTING THE PIPELINE
+
+    tbb::pipeline pipeline;
+    TextCleaner *input_cleaner_p = NULL;
+    TextCleaner *annot_cleaner_p = NULL;
+    RoughTokenizer *rough_tokenizer_p = NULL;
+    FeatureExtractor *feature_extractor_p = NULL;
+    Classifier *classifier_p = NULL;
+    SimplePreparer *simple_preparer_p = NULL;
+    OutputFormatter *output_formatter_p = NULL;
+    Encoder *encoder_p = NULL;
+
+    if ((mode == TRAIN_MODE) || (EVALUATE_MODE)) {
       
-      std::ifstream* annot_stream_p = new std::ifstream("annot.txt");
+      pipes::pipe input_pipe(pipes::pipe::limited_capacity);
+      pipes::opipestream input_pipe_to(input_pipe);
+      pipes::ipipestream input_pipe_from(input_pipe);
 
-      TextCleaner annot_cleaner(&my_annot_pipe_to, s_encoding, o_hide_xml,
-                                o_expand_entities, o_keep_entities_expanded);
-      annot_cleaner.setup(annot_stream_p);
+      input_cleaner_p = new TextCleaner(&input_pipe_to, s_encoding,
+                                        o_hide_xml, o_expand_entities,
+                                        o_keep_entities_expanded);
 
-      Classifier classifier(mode, prop_id_to_name, precontext, postcontext,
-                            features_mask, combined_features,
-                            &my_annot_pipe_from, &std::cout);
-      classifier.setup("test.txt");
+      rough_tokenizer_p = new RoughTokenizer(rough_lexer_wrapper);
+      rough_tokenizer_p->setup(&input_pipe_from, "UTF-8");
 
+      pipes::pipe annot_pipe(pipes::pipe::limited_capacity);
+      pipes::opipestream annot_pipe_to(annot_pipe);
+      pipes::ipipestream annot_pipe_from(annot_pipe);
 
-      tbb::pipeline my_pipeline;
-      my_pipeline.add_filter(rough_tok);
-      my_pipeline.add_filter(feature_extractor);
-      my_pipeline.add_filter(classifier);
+      annot_cleaner_p = new TextCleaner(&annot_pipe_to, s_encoding,
+                                        o_hide_xml, o_expand_entities,
+                                        o_keep_entities_expanded);
 
+      feature_extractor_p = new FeatureExtractor(n_basic_properties,
+                                                 regex_properties,
+                                                 word_to_enum_props);
 
-      boost::thread input_thread(&TextCleaner::do_work,
-                                 boost::ref(cleaner));
-      boost::thread annot_thread(&TextCleaner::do_work,
-                                 boost::ref(annot_cleaner));
-      my_pipeline.run(WORK_UNIT_COUNT);
-      input_thread.join();
-      annot_thread.join();
+      classifier_p = new Classifier(mode, prop_id_to_name, precontext,
+                                    postcontext, features_mask,
+                                    combined_features, qa_stream_p,
+                                    &annot_pipe_from);
 
-      training_parameters_t training_parameters;
-      classifier.train_model(training_parameters,
-                             (build_path / "maxent.model").native());
+      pipeline.add_filter(*rough_tokenizer_p);
+      pipeline.add_filter(*feature_extractor_p);
+      pipeline.add_filter(*classifier_p);
 
-    } else {
+    } else if ((mode == PREPARE_MODE) || (mode == TOKENIZE_MODE)) {
 
-      pipes::pipe my_input_pipe(pipes::pipe::limited_capacity);
-      pipes::opipestream my_input_pipe_to(my_input_pipe);
-      pipes::ipipestream my_input_pipe_from(my_input_pipe);
+      pipes::pipe input_pipe(pipes::pipe::limited_capacity);
+      pipes::opipestream input_pipe_to(input_pipe);
+      pipes::ipipestream input_pipe_from(input_pipe);
 
       tbb::concurrent_bounded_queue<cutout_t> cutout_queue;
-      TextCleaner cleaner(&my_input_pipe_to, s_encoding, o_hide_xml,
-                          o_expand_entities, o_keep_entities_expanded,
-                          &cutout_queue);
-      cleaner.setup(&std::cin);
+      input_cleaner_p = new TextCleaner(&input_pipe_to, s_encoding,
+                                        o_hide_xml, o_expand_entities,
+                                        o_keep_entities_expanded,
+                                        &cutout_queue);
 
-      RoughTokenizer rough_tok(rough_lexer_wrapper);
-      rough_tok.setup(&my_input_pipe_from, "UTF-8");
+      rough_tokenizer_p = new RoughTokenizer(rough_lexer_wrapper);
+      rough_tokenizer_p->setup(&input_pipe_from, "UTF-8");
+      pipeline.add_filter(*rough_tokenizer_p);
 
-      FeatureExtractor feature_extractor(n_basic_properties,
-                                         regex_properties,
-                                         word_to_enum_props);
+      // If we only want to cut up raw text so it is easier to annotate
+      // and we are not interested in any features, we can cut out a lot
+      // of work by replacing the FeatureExtractor and Classifier with a
+      // SimplePreparer
+      if ((mode == PREPARE_MODE) && (qa_stream_p == NULL)) {
+        simple_preparer_p = new SimplePreparer();
+        pipeline.add_filter(*simple_preparer_p);
+      }
+      else {
+        feature_extractor_p = new FeatureExtractor(n_basic_properties,
+                                                   regex_properties,
+                                                   word_to_enum_props);
+        pipeline.add_filter(*feature_extractor_p);
 
-      Classifier classifier(mode, prop_id_to_name, precontext, postcontext,
-                            features_mask, combined_features);
-      classifier.load_model((build_path / "maxent.model").native());
-      classifier.setup("test.txt");
+        classifier_p = new Classifier(mode, prop_id_to_name, precontext,
+                                      postcontext, features_mask,
+                                      combined_features, qa_stream_p);
+        pipeline.add_filter(*classifier_p);
 
-      pipes::pipe my_output_pipe(pipes::pipe::limited_capacity);
-      pipes::opipestream my_output_pipe_to(my_output_pipe);
-      pipes::ipipestream my_output_pipe_from(my_output_pipe);
+        if (!fs::exists(model_path)) {
+          END_WITH_ERROR(model_path, "Maxent model not found. Please train "
+              "the maxent model before using it for tokenization.");
+        }
+        classifier_p->load_model(model_path.native());
+      } //if ((mode == PREPARE_MODE) && (qa_stream_p == NULL))
+
+      pipes::pipe output_pipe(pipes::pipe::limited_capacity);
+      pipes::opipestream output_pipe_to(output_pipe);
+      pipes::ipipestream output_pipe_from(output_pipe);
       
-      OutputFormatter formatter(&my_output_pipe_to, o_detokenize,
-                                o_preserve_segments, o_preserve_paragraphs,
-                                &cutout_queue);
+      output_formatter_p = new OutputFormatter(&output_pipe_to, o_detokenize,
+                                               o_preserve_segments,
+                                               o_preserve_paragraphs,
+                                               &cutout_queue);
+      pipeline.add_filter(*output_formatter_p);
 
-      Encoder encoder(&my_output_pipe_from, s_encoding);
-      encoder.setup(&std::cout);
+      encoder_p = new Encoder(&output_pipe_from, s_encoding);
+    } // if ((mode == PREPARE_MODE) || (mode == TOKENIZE_MODE))
+    
+    
+    // RUNNING THE PIPELINE
 
-      tbb::pipeline my_pipeline;
-      my_pipeline.add_filter(rough_tok);
-      my_pipeline.add_filter(feature_extractor);
-      my_pipeline.add_filter(classifier);
-      my_pipeline.add_filter(formatter);
+    for (vector<string>::const_iterator input_file = input_files.begin();
+         input_file != input_files.end(); input_file++) {
+      
+      fs::path input_file_path(*input_file);
+      if (!fs::exists(input_file_path)) {
+        cerr << *input_file << ": Warning: File not found, skipping." << endl;
+        continue;
+      }
+      
+      string other_file(*input_file);
+      bool fnre_success = fnre_regexp.Replace(fnre_replace, &other_file);
 
+      if (!fnre_success) {
+        cerr << *input_file << ": Warning: Failed to apply regex to find "
+            "partner file, skipping. Possible causes include the regular "
+            "expression failing to match and the replacement string using "
+            "illegal backreferences." << endl;
+        continue;
+      }
+      
+      if ((mode == TRAIN_MODE) || (mode == EVALUATE_MODE)) {
+        // Check for the annotated file,...
+        fs::path annotated_file_path(other_file);
+        if (!fs::exists(annotated_file_path)) {
+          cerr << other_file << ": Warning: Annotated file does not exist, "
+              "skipping." << endl;
+        }
 
-      boost::thread input_thread(&TextCleaner::do_work, boost::ref(cleaner));
-      boost::thread output_thread(&Encoder::do_work, boost::ref(encoder));
-      my_pipeline.run(WORK_UNIT_COUNT);
-      input_thread.join();
-      output_thread.join();
+        // open the files,...
+        fs::ifstream input_stream(input_file_path);
+        fs::ifstream annotated_stream(annotated_file_path);
+
+        // clean out and setup the pipeline,...
+        input_cleaner_p->setup(&input_stream);
+        rough_tokenizer_p->reset();
+        annot_cleaner_p->setup(&annotated_stream);
+        classifier_p->setup(input_file_path.native());
+
+        // run it...
+        boost::thread input_thread(&TextCleaner::do_work,
+                                   boost::ref(*input_cleaner_p));
+        boost::thread annot_thread(&TextCleaner::do_work,
+                                   boost::ref(*annot_cleaner_p));
+        pipeline.run(WORK_UNIT_COUNT);
+        input_thread.join();
+        annot_thread.join();
+      
+        // and close the files.
+        input_stream.close();
+        annotated_stream.close();
+
+      } else if ((mode == PREPARE_MODE) || (mode == TOKENIZE_MODE)) {
+
+        // Open the files,...
+        fs::path output_file_path(other_file);
+
+        fs::ifstream input_stream(input_file_path);
+        fs::ofstream output_stream(output_file_path);
+
+        // setup the pipeline,...
+        input_cleaner_p->setup(&input_stream);
+        rough_tokenizer_p->reset();
+        if (simple_preparer_p != NULL) {
+          simple_preparer_p->reset();
+        } else {
+          feature_extractor_p->reset();
+          classifier_p->setup(input_file_path.native());
+        }
+        output_formatter_p->reset();
+        encoder_p->setup(&output_stream);
+
+        // run it...
+        boost::thread input_thread(&TextCleaner::do_work,
+                                   boost::ref(*input_cleaner_p));
+        boost::thread output_thread(&Encoder::do_work,
+                                    boost::ref(*encoder_p));
+        pipeline.run(WORK_UNIT_COUNT);
+        input_thread.join();
+        output_thread.join();
+        
+        // and close the files.
+        input_stream.close();
+        output_stream.close();
+      }
+    }
+
+    // If our mission was to train a maxent model, then by now the Classifier
+    // has accumulated all the required questions and answers, so we can hand
+    // it over to the Maxent toolkit to do the rest.
+    if (mode == TRAIN_MODE) {
+      classifier_p->train_model(training_parameters, model_path.native());
     }
 
     lt_dlexit();

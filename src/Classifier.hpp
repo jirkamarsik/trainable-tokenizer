@@ -38,6 +38,7 @@ struct training_parameters_t {
 };
 
 class Classifier: public tbb::filter {
+
 public:
     Classifier(
            classifier_mode_t mode,
@@ -46,8 +47,8 @@ public:
            int postcontext,
            bool *features_mask,
            std::vector< std::vector< std::pair<int,int> > > combined_features,
-           std::istream *annot_stream_p = NULL,
-           std::ostream *qa_stream_p = NULL):
+           std::ostream *qa_stream_p = NULL,
+           std::istream *annot_stream_p = NULL):
               tbb::filter(tbb::filter::serial_in_order),
               m_mode(mode),
               m_property_names(property_names),
@@ -56,8 +57,8 @@ public:
               m_window_size(precontext + 1 + postcontext),
               m_features_mask(features_mask),
               m_combined_features(combined_features),
-              m_annot_stream_p(annot_stream_p),
               m_qa_stream_p(qa_stream_p),
+              m_annot_stream_p(annot_stream_p),
               m_n_events_registered(0)
     {
         m_window = new token_t[m_window_size];
@@ -110,7 +111,8 @@ public:
 private:
     bool consume_whitespace();
     void report_alignment_warning(std::string occurence_type,
-    std::string prefix, std::string suffix, std::string advice);
+                                  std::string prefix, std::string suffix,
+                                  std::string advice);
 private:
     // Configuration
     classifier_mode_t m_mode;
