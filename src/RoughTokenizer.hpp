@@ -1,3 +1,6 @@
+#ifndef ROUGH_TOKENIZER_INCLUDE_GUARD
+#define ROUGH_TOKENIZER_INCLUDE_GUARD
+
 #include <iostream>
 #include <string>
 #include <tbb/pipeline.h>
@@ -37,3 +40,5 @@ private:
 };
 
 }
+
+#endif

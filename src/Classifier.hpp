@@ -1,3 +1,6 @@
+#ifndef CLASSIFIER_INCLUDE_GUARD
+#define CLASSIFIER_INCLUDE_GUARD
+
 #include <iostream>
 #include <string>
 #include <vector>
@@ -41,7 +44,7 @@ public:
            std::vector<std::string> const &property_names,
            int precontext,
            int postcontext,
-           bool *features_map,
+           bool *features_mask,
            std::vector< std::vector< std::pair<int,int> > > combined_features,
            std::istream *annot_stream_p = NULL,
            std::ostream *qa_stream_p = NULL):
@@ -51,14 +54,14 @@ public:
               m_precontext(precontext),
               m_postcontext(postcontext),
               m_window_size(precontext + 1 + postcontext),
-              m_features_map(features_map),
+              m_features_mask(features_mask),
               m_combined_features(combined_features),
               m_annot_stream_p(annot_stream_p),
               m_qa_stream_p(qa_stream_p),
               m_n_events_registered(0)
     {
         m_window = new token_t[m_window_size];
-        if (m_mode == "train") {
+        if (m_mode == TRAIN_MODE) {
           m_model.begin_add_event();
         }
         reset();
@@ -115,7 +118,7 @@ private:
     int m_precontext;
     int m_postcontext;
     int m_window_size;
-    bool *m_features_map;
+    bool *m_features_mask;
     std::vector< std::vector< std::pair<int,int> > > m_combined_features;
     std::ostream *m_qa_stream_p;
     std::istream *m_annot_stream_p;
@@ -131,3 +134,5 @@ private:
 };
 
 }
+
+#endif

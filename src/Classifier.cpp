@@ -18,8 +18,8 @@
   }\
 }
 
-#define FEATURES_MAP(offset, property)\
-  m_features_map[offset * (n_defined_properties + 2) + property]
+#define FEATURES_MASK(offset, property)\
+  m_features_mask[offset * (n_defined_properties + 2) + property]
 
 namespace trtok {
 
@@ -89,7 +89,7 @@ void Classifier::process_center_token(chunk_t *out_chunk_p) {
 
       // user-defined features
       for (int property = 0; property != n_defined_properties; property++) {
-        if (FEATURES_MAP(offset + m_precontext, property)) {
+        if (FEATURES_MASK(offset + m_precontext, property)) {
           context.push_back(std::make_pair(
               offset_str + m_property_names[property],
               questioned_token.property_flags[property] ? 1.0 : 0.0));
@@ -97,12 +97,12 @@ void Classifier::process_center_token(chunk_t *out_chunk_p) {
       } 
 
       // special features
-      if (FEATURES_MAP(offset + m_precontext, length_property)) {
+      if (FEATURES_MASK(offset + m_precontext, length_property)) {
         context.push_back(std::make_pair(
               offset_str + m_property_names[length_property],
               questioned_token.text.length()));
       }
-      if (FEATURES_MAP(offset + m_precontext, word_property)) {
+      if (FEATURES_MASK(offset + m_precontext, word_property)) {
         context.push_back(std::make_pair(
               offset_str + m_property_names[word_property]
               + "=" + questioned_token.text,
@@ -164,7 +164,7 @@ void Classifier::process_center_token(chunk_t *out_chunk_p) {
     std::string true_outcome;
     std::string predicted_outcome;
 
-    if ((m_mode == "train") || (m_mode == "evaluate")) {
+    if ((m_mode == TRAIN_MODE) || (m_mode == EVALUATE_MODE)) {
       if (center_token.decision_flags & DO_BREAK_SENTENCE_FLAG) {
         true_outcome = "BREAK_SENTENCE";
       } else if ((center_token.decision_flags & DO_SPLIT_FLAG)
@@ -177,11 +177,11 @@ void Classifier::process_center_token(chunk_t *out_chunk_p) {
       }
     }
 
-    if ((m_mode == "tokenize") || (m_mode == "evaluate")) {
+    if ((m_mode == TOKENIZE_MODE) || (m_mode == EVALUATE_MODE)) {
       predicted_outcome = m_model.predict(context);
     }
 
-    if (m_mode == "prepare") {
+    if (m_mode == PREPARE_MODE) {
       if (center_token.decision_flags & MAY_SPLIT_FLAG) {
         center_token.decision_flags = (decision_flags_t)
               (center_token.decision_flags | DO_SPLIT_FLAG);
@@ -191,11 +191,11 @@ void Classifier::process_center_token(chunk_t *out_chunk_p) {
               (center_token.decision_flags | DO_BREAK_SENTENCE_FLAG);
       }
     }
-    else if (m_mode == "train") {
+    else if (m_mode == TRAIN_MODE) {
       m_model.add_event(context, true_outcome);
       m_n_events_registered++;
     }
-    else if (m_mode == "tokenize") {
+    else if (m_mode == TOKENIZE_MODE) {
       if ((predicted_outcome == "BREAK_SENTENCE")
        && (center_token.decision_flags & MAY_BREAK_SENTENCE_FLAG)) {
         center_token.decision_flags = (decision_flags_t)
@@ -227,13 +227,13 @@ void Classifier::process_center_token(chunk_t *out_chunk_p) {
       }
 
       std::string outcome_string;
-      if (m_mode == "prepare") {
+      if (m_mode == PREPARE_MODE) {
         outcome_string = "";
-      } else if (m_mode == "tokenize") {
+      } else if (m_mode == TOKENIZE_MODE) {
         outcome_string = predicted_outcome;
-      } else if (m_mode == "train") {
+      } else if (m_mode == TRAIN_MODE) {
         outcome_string = true_outcome;
-      } else if (m_mode == "evaluate") {
+      } else if (m_mode == EVALUATE_MODE) {
         outcome_string = predicted_outcome + "/" + true_outcome;
       }
 
@@ -379,12 +379,12 @@ void Classifier::align_chunk_with_solution(chunk_t *in_chunk_p) {
 void* Classifier::operator()(void* input_p) {
   chunk_t* in_chunk_p = (chunk_t*)input_p;
 
-  if ((m_mode == "train") || (m_mode == "evaluate")) {
+  if ((m_mode == TRAIN_MODE) || (m_mode == EVALUATE_MODE)) {
     align_chunk_with_solution(in_chunk_p);
   }
 
   chunk_t *out_chunk_p = NULL;
-  if ((m_mode == "tokenize") || (m_mode == "prepare")) {
+  if ((m_mode == TOKENIZE_MODE) || (m_mode == PREPARE_MODE)) {
     out_chunk_p = new chunk_t;
     out_chunk_p->is_final = in_chunk_p->is_final;
   }

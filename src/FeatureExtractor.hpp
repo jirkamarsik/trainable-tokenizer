@@ -1,3 +1,6 @@
+#ifndef FEATURE_EXTRACTOR_INCLUDE_GUARD
+#define FEATURE_EXTRACTOR_INCLUDE_GUARD
+
 #include <vector>
 #include <string>
 #include <map>
@@ -24,3 +27,5 @@ private:
 };
 
 }
+
+#endif

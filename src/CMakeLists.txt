@@ -164,7 +164,9 @@ add_definitions ("-DQUEX_OPTION_ASSERTS_WARNING_MESSAGE_DISABLED")
 
 set (SRCS main.cpp TextCleaner.cpp ${QUEX_ENTITY}.cpp ${QUEX_XML}.cpp
     rough_tok_compile.cpp RoughTokenizer.cpp OutputFormatter.cpp
-    Encoder.cpp FeatureExtractor.cpp Classifier.cpp ${QUEX_FEATURES}.cpp)
+    Encoder.cpp FeatureExtractor.cpp Classifier.cpp ${QUEX_FEATURES}.cpp
+    read_features_file.cpp)
+
 add_executable (trtok ${SRCS})
 
 # The gold linker now in use in modern GNU/Linux distributions such as
