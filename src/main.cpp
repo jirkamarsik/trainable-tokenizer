@@ -66,13 +66,13 @@ bool path_compare(fs::path const &a, fs::path const &b) {
 
 void include_listed_files(fs::path const &file_list_path,
                           vector<string> &input_files) {
-    fs::ifstream file_list(file_list_path);
+    fs::ifstream file_list_stream(file_list_path);
     string line;
-    while (getline(file_list, line)) {
+    while (getline(file_list_stream, line)) {
       if (line.size() > 0)
         input_files.push_back(line);
     }
-    file_list.close();
+    file_list_stream.close();
 }
 
 
@@ -92,7 +92,6 @@ int main(int argc, char const **argv) {
     vector<string> sv_file_lists;
     string s_filename_regexp;
 
-    bool o_help;
     bool o_preserve_paragraphs, o_detokenize, o_preserve_segments;
     bool o_hide_xml, o_expand_entities, o_keep_entities_expanded;
     bool o_verbose;
@@ -114,7 +113,7 @@ int main(int argc, char const **argv) {
         "specified.")
       ("filename-regexp,r",
           po::value<string>(&s_filename_regexp)
-                           ->default_value("/(.*)\\.txt/\1.tok/"),
+                           ->default_value("/(.*)\\.txt/\\1.tok/"),
         "A regular expression/replacement string used to generate a set of "
         "pairs of input/output files. Output files are written to in TOKENIZE "
         "mode and are used as correct answers in TRAIN and EVALUATE modes. If "
@@ -122,8 +121,6 @@ int main(int argc, char const **argv) {
         "contents of files train.fnre and evaluate.fnre in the directory "
         "scheme-path are used instead. If the mode is TOKENIZE, the output of "
         "tokenization is printed to the standard output.")
-      ("help,h", po::bool_switch(&o_help),
-        "Prints this usage information.")
       ("preserve-paragraphs,p", po::bool_switch(&o_preserve_paragraphs),
         "Replaces paragraph breaks with a blank line.")
       ("detokenize,d", po::bool_switch(&o_detokenize),
@@ -178,17 +175,13 @@ int main(int argc, char const **argv) {
         po::store(cmd_line.run(), vm);
         po::notify(vm);
     } catch (po::error const &exc) {
-        END_WITH_ERROR("trtok", exc.what() << 
-                                "See trtok --help for proper usage.");
-    }
-
-
-    if (o_help) {
-        cout << "Usage: trtok <prepare|train|tokenize|evaluate> "
+        cerr << "trtok:command line options: Error: " << exc.what() << endl;
+        cerr << "Usage: trtok <prepare|train|tokenize|evaluate> "
                 "SCHEME [OPTION]... [FILE]..." << endl;
-        cout << explicit_options;
-        return 0;
+        cerr << explicit_options;
+        return 1;
     }
+
 
     classifier_mode_t mode;
     if (s_mode == "prepare") {
@@ -483,6 +476,8 @@ int main(int argc, char const **argv) {
       return read_features_exit_code;
     }
 
+    // DETERMINING THE INPUT FILES
+
     vector<string> input_files;
 
     // The files explicitly stated on the command line are to be processed
@@ -525,6 +520,9 @@ int main(int argc, char const **argv) {
     if (input_files.size() == 0) {
       input_files.push_back("-");
     }
+
+
+    // PARSING THE FILENAME REGEXP/REPLACEMENT STRING
     
     // If no filename-regexp was given, we check for the presence of a
     // .fnre file and use its contents instead of the default.
@@ -590,9 +588,17 @@ int main(int argc, char const **argv) {
           << fnre_regexp.error());
     }
     
+
+    // PARSING OTHER TIDBITS
+
     // This is the file in which the trained maxent model for this tokenization
     // scheme is stored.
     fs::path model_path = build_path / "maxent.model";
+    if (((mode == TOKENIZE_MODE) || (mode == EVALUATE_MODE))
+        && !fs::exists(model_path)) {
+      END_WITH_ERROR(model_path, "Maxent model not found. Please train "
+          "the maxent model before using it for tokenization.");
+    }
 
     // If a questions/answers file was requested, we create a stream to one.
     // If we are in the EVALUATE_MODE, we always want to output questions
@@ -606,7 +612,9 @@ int main(int argc, char const **argv) {
       }
     }
 
+
     // PARSING THE TRAINING PARAMETERS
+
     training_parameters_t training_parameters;
     if ((mode == TRAIN_MODE) && !maxentparams_file.empty()) {
 
@@ -627,43 +635,65 @@ int main(int argc, char const **argv) {
           ;
 
       po::variables_map maxent_vm;
-      po::store(po::parse_config_file(maxentparams_stream, training_options),
-                maxent_vm);
-      po::notify(maxent_vm);
+      try {
+        po::store(po::parse_config_file(maxentparams_stream, training_options),
+                  maxent_vm);
+        po::notify(maxent_vm);
+      } catch (po::error const &exc) {
+          END_WITH_ERROR(maxentparams_file, exc.what() << endl <<
+              "See the documentation for a proper way to set maxent training "
+              "parameters.");
+      }
 
       maxentparams_stream.close();
     }
 
+
     // CONSTRUCTING THE PIPELINE
 
     tbb::pipeline pipeline;
+
+    tbb::concurrent_bounded_queue<cutout_t> *cutout_queue_p = NULL;
+
     TextCleaner *input_cleaner_p = NULL;
+    pipes::pipe *input_pipe_p = NULL;
+    pipes::opipestream *input_pipe_to_p = NULL;
+    pipes::ipipestream *input_pipe_from_p = NULL;
+
     TextCleaner *annot_cleaner_p = NULL;
+    pipes::pipe *annot_pipe_p = NULL;
+    pipes::opipestream *annot_pipe_to_p = NULL;
+    pipes::ipipestream *annot_pipe_from_p = NULL;
+
     RoughTokenizer *rough_tokenizer_p = NULL;
     FeatureExtractor *feature_extractor_p = NULL;
     Classifier *classifier_p = NULL;
     SimplePreparer *simple_preparer_p = NULL;
     OutputFormatter *output_formatter_p = NULL;
+
     Encoder *encoder_p = NULL;
+    pipes::pipe *output_pipe_p = NULL;
+    pipes::opipestream *output_pipe_to_p = NULL;
+    pipes::ipipestream *output_pipe_from_p = NULL;
 
-    if ((mode == TRAIN_MODE) || (EVALUATE_MODE)) {
+    if ((mode == TRAIN_MODE) || (mode == EVALUATE_MODE)) {
       
-      pipes::pipe input_pipe(pipes::pipe::limited_capacity);
-      pipes::opipestream input_pipe_to(input_pipe);
-      pipes::ipipestream input_pipe_from(input_pipe);
+      input_pipe_p = new pipes::pipe(pipes::pipe::limited_capacity);
+      input_pipe_to_p = new pipes::opipestream(*input_pipe_p);
+      input_pipe_from_p = new pipes::ipipestream(*input_pipe_p);
 
-      input_cleaner_p = new TextCleaner(&input_pipe_to, s_encoding,
+      input_cleaner_p = new TextCleaner(input_pipe_to_p, s_encoding,
                                         o_hide_xml, o_expand_entities,
                                         o_keep_entities_expanded);
 
       rough_tokenizer_p = new RoughTokenizer(rough_lexer_wrapper);
-      rough_tokenizer_p->setup(&input_pipe_from, "UTF-8");
+      rough_tokenizer_p->setup(input_pipe_from_p, "UTF-8");
 
-      pipes::pipe annot_pipe(pipes::pipe::limited_capacity);
-      pipes::opipestream annot_pipe_to(annot_pipe);
-      pipes::ipipestream annot_pipe_from(annot_pipe);
+      annot_pipe_p = new pipes::pipe(pipes::pipe::limited_capacity);
+      annot_pipe_to_p = new pipes::opipestream(*annot_pipe_p);
+      annot_pipe_from_p = new pipes::ipipestream(*annot_pipe_p);
 
-      annot_cleaner_p = new TextCleaner(&annot_pipe_to, s_encoding,
+      annot_cleaner_p = new TextCleaner(annot_pipe_to_p, s_encoding,
                                         o_hide_xml, o_expand_entities,
                                         o_keep_entities_expanded);
 
@@ -674,7 +704,10 @@ int main(int argc, char const **argv) {
       classifier_p = new Classifier(mode, prop_id_to_name, precontext,
                                     postcontext, features_mask,
                                     combined_features, qa_stream_p,
-                                    &annot_pipe_from);
+                                    annot_pipe_from_p);
+      if (mode == EVALUATE_MODE) {
+        classifier_p->load_model(model_path.native());
+      }
 
       pipeline.add_filter(*rough_tokenizer_p);
       pipeline.add_filter(*feature_extractor_p);
@@ -682,18 +715,19 @@ int main(int argc, char const **argv) {
 
     } else if ((mode == PREPARE_MODE) || (mode == TOKENIZE_MODE)) {
 
-      pipes::pipe input_pipe(pipes::pipe::limited_capacity);
-      pipes::opipestream input_pipe_to(input_pipe);
-      pipes::ipipestream input_pipe_from(input_pipe);
+      cutout_queue_p = new tbb::concurrent_bounded_queue<cutout_t>;
 
-      tbb::concurrent_bounded_queue<cutout_t> cutout_queue;
-      input_cleaner_p = new TextCleaner(&input_pipe_to, s_encoding,
+      input_pipe_p = new pipes::pipe(pipes::pipe::limited_capacity);
+      input_pipe_to_p = new pipes::opipestream(*input_pipe_p);
+      input_pipe_from_p = new pipes::ipipestream(*input_pipe_p);
+
+      input_cleaner_p = new TextCleaner(input_pipe_to_p, s_encoding,
                                         o_hide_xml, o_expand_entities,
                                         o_keep_entities_expanded,
-                                        &cutout_queue);
+                                        cutout_queue_p);
 
       rough_tokenizer_p = new RoughTokenizer(rough_lexer_wrapper);
-      rough_tokenizer_p->setup(&input_pipe_from, "UTF-8");
+      rough_tokenizer_p->setup(input_pipe_from_p, "UTF-8");
       pipeline.add_filter(*rough_tokenizer_p);
 
       // If we only want to cut up raw text so it is easier to annotate
@@ -715,24 +749,20 @@ int main(int argc, char const **argv) {
                                       combined_features, qa_stream_p);
         pipeline.add_filter(*classifier_p);
 
-        if (!fs::exists(model_path)) {
-          END_WITH_ERROR(model_path, "Maxent model not found. Please train "
-              "the maxent model before using it for tokenization.");
-        }
         classifier_p->load_model(model_path.native());
       } //if ((mode == PREPARE_MODE) && (qa_stream_p == NULL))
 
-      pipes::pipe output_pipe(pipes::pipe::limited_capacity);
-      pipes::opipestream output_pipe_to(output_pipe);
-      pipes::ipipestream output_pipe_from(output_pipe);
+      output_pipe_p = new pipes::pipe(pipes::pipe::limited_capacity);
+      output_pipe_to_p = new pipes::opipestream(*output_pipe_p);
+      output_pipe_from_p = new pipes::ipipestream(*output_pipe_p);
       
-      output_formatter_p = new OutputFormatter(&output_pipe_to, o_detokenize,
+      output_formatter_p = new OutputFormatter(output_pipe_to_p, o_detokenize,
                                                o_preserve_segments,
                                                o_preserve_paragraphs,
-                                               &cutout_queue);
+                                               cutout_queue_p);
       pipeline.add_filter(*output_formatter_p);
 
-      encoder_p = new Encoder(&output_pipe_from, s_encoding);
+      encoder_p = new Encoder(output_pipe_from_p, s_encoding);
     } // if ((mode == PREPARE_MODE) || (mode == TOKENIZE_MODE))
     
     
@@ -742,33 +772,61 @@ int main(int argc, char const **argv) {
          input_file != input_files.end(); input_file++) {
       
       fs::path input_file_path(*input_file);
-      if (!fs::exists(input_file_path)) {
-        cerr << *input_file << ": Warning: File not found, skipping." << endl;
-        continue;
-      }
-      
       string other_file(*input_file);
-      bool fnre_success = fnre_regexp.Replace(fnre_replace, &other_file);
 
-      if (!fnre_success) {
-        cerr << *input_file << ": Warning: Failed to apply regex to find "
-            "partner file, skipping. Possible causes include the regular "
-            "expression failing to match and the replacement string using "
-            "illegal backreferences." << endl;
-        continue;
+      if (*input_file != "-") {
+        // We are working with files
+        if (!fs::exists(input_file_path)) {
+          cerr << *input_file << ": Warning: File not found, skipping."
+               << endl;
+          continue;
+        }
+        
+        bool fnre_success = fnre_regexp.Replace(fnre_replace, &other_file);
+
+        if (!fnre_success) {
+          cerr << *input_file << ": Warning: Failed to apply regex to find "
+              "partner file, skipping. Possible causes include the regular "
+              "expression failing to match and the replacement string using "
+              "illegal backreferences." << endl;
+          continue;
+        }
       }
       
       if ((mode == TRAIN_MODE) || (mode == EVALUATE_MODE)) {
+        
+        if (*input_file == "-") {
+          END_WITH_ERROR("trtok", "train mode and evaluate mode cannot act on "
+              "the standard input alone.");
+        }
+
         // Check for the annotated file,...
         fs::path annotated_file_path(other_file);
         if (!fs::exists(annotated_file_path)) {
           cerr << other_file << ": Warning: Annotated file does not exist, "
               "skipping." << endl;
+          continue;
         }
 
         // open the files,...
         fs::ifstream input_stream(input_file_path);
         fs::ifstream annotated_stream(annotated_file_path);
+
+        // restore the pipes,...
+        /* The sender closes his pipestream to signal an EOF to the receiver.
+           These pipestreams need to reopened for subsequent iterations.
+           All pipestreams must however disconnect from the pipe before
+           we can use it again. */
+        if (!input_pipe_to_p->is_open()) {
+          input_pipe_from_p->close();
+          input_pipe_to_p->open(*input_pipe_p);
+          input_pipe_from_p->open(*input_pipe_p);
+        }
+        if (!annot_pipe_to_p->is_open()) {
+          annot_pipe_from_p->close();
+          annot_pipe_to_p->open(*annot_pipe_p);
+          annot_pipe_from_p->open(*annot_pipe_p);
+        }
 
         // clean out and setup the pipeline,...
         input_cleaner_p->setup(&input_stream);
@@ -794,11 +852,25 @@ int main(int argc, char const **argv) {
         // Open the files,...
         fs::path output_file_path(other_file);
 
-        fs::ifstream input_stream(input_file_path);
-        fs::ofstream output_stream(output_file_path);
+        std::istream *input_stream_p = (*input_file == "-") ? &std::cin
+                                       : new fs::ifstream(input_file_path);
+        std::ostream *output_stream_p = (*input_file == "-") ? &std::cout
+                                        : new fs::ofstream(output_file_path);
+
+        // restore the pipes,...
+        if (!input_pipe_to_p->is_open()) {
+          input_pipe_from_p->close();
+          input_pipe_to_p->open(*input_pipe_p);
+          input_pipe_from_p->open(*input_pipe_p);
+        }
+        if (!output_pipe_to_p->is_open()) {
+          output_pipe_from_p->close();
+          output_pipe_to_p->open(*output_pipe_p);
+          output_pipe_from_p->open(*output_pipe_p);
+        }
 
         // setup the pipeline,...
-        input_cleaner_p->setup(&input_stream);
+        input_cleaner_p->setup(input_stream_p);
         rough_tokenizer_p->reset();
         if (simple_preparer_p != NULL) {
           simple_preparer_p->reset();
@@ -807,7 +879,7 @@ int main(int argc, char const **argv) {
           classifier_p->setup(input_file_path.native());
         }
         output_formatter_p->reset();
-        encoder_p->setup(&output_stream);
+        encoder_p->setup(output_stream_p);
 
         // run it...
         boost::thread input_thread(&TextCleaner::do_work,
@@ -819,8 +891,15 @@ int main(int argc, char const **argv) {
         output_thread.join();
         
         // and close the files.
-        input_stream.close();
-        output_stream.close();
+        if (*input_file != "-") {
+          fs::ifstream *input_file_stream_p = (fs::ifstream*)input_stream_p;
+          fs::ofstream *output_file_stream_p = (fs::ofstream*)output_stream_p;
+          input_file_stream_p->close();
+          output_file_stream_p->flush();
+          output_file_stream_p->close();
+          delete input_file_stream_p;
+          delete output_file_stream_p;
+        }
       }
     }
 

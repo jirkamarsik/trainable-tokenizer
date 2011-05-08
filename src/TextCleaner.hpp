@@ -49,12 +49,13 @@ private:
   void prepare_entity_map();
   bool expand_entity(std::string const &entity, uint32_t &expanded_str);
 
-  std::istream *m_input_stream_p;
   pipes::opipestream *m_output_stream_p;
   std::string m_input_encoding;
   bool m_expand_entities, m_keep_entities_expanded, m_hide_xml;
   tbb::concurrent_bounded_queue<cutout_t> *m_cutout_queue_p;
   boost::unordered_map<std::string, uint32_t> m_entity_map;
+
+  std::istream *m_input_stream_p;
 };
 }
 
