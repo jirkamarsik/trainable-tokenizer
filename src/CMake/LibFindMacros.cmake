@@ -1,3 +1,7 @@
+# This package of macros was lifted from:
+# http://www.vtk.org/Wiki/CMake:How_To_Find_Libraries
+# The wiki is licensed as "Content is available under Attribution2.5."
+
 # Works the same as find_package, but forwards the "REQUIRED" and "QUIET" arguments
 # used for the current package. For this to work, the first parameter must be the
 # prefix of the current package, then the prefix of the new package etc, which are

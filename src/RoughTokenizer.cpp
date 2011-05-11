@@ -2,14 +2,15 @@
 #include <cassert>
 
 #include "RoughTokenizer.hpp"
-#include "rough_tok/rough_tok_wrapper.hpp"
+#include "configuration.hpp"
+#include "roughtok/roughtok_wrapper.hpp"
 #include "token_t.hpp"
 
 namespace trtok {
 
 void* RoughTokenizer::operator()(void*) {
   if (m_hit_end) {
-    // Returing NULL signifies the end of the input sequence to TBB
+    // Returing NULL signifies the end of processing to TBB
     return NULL;
   }
 

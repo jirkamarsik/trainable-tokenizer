@@ -24,7 +24,7 @@
 #include "config_exception.hpp"
 #include "TextCleaner.hpp"
 #include "cutout_t.hpp"
-#include "rough_tok_compile.hpp"
+#include "roughtok_compile.hpp"
 #include "RoughTokenizer.hpp"
 #include "read_features_file.hpp"
 #include "FeatureExtractor.hpp"
@@ -39,7 +39,7 @@ namespace po = boost::program_options;
 namespace fs = boost::filesystem;
 
 #define END_WITH_ERROR(location, message) {\
-  std::cerr << location << ": Error: " << message << std::endl;\
+  cerr << location << ": Error: " << message << endl;\
   return 1;\
 }
 
@@ -411,7 +411,7 @@ int main(int argc, char const **argv) {
 
     // The words beloning to enumerated properties are inserted into
     // a BST along with the ids of enumeation properties they belong to.
-    std::multimap<string, int> word_to_enum_props;
+    multimap<string, int> word_to_enum_props;
     for (vector<fs::path>::const_iterator file = enump_files.begin();
          file != enump_files.end(); file++) {
       // Read and store words...
@@ -603,12 +603,12 @@ int main(int argc, char const **argv) {
     // If a questions/answers file was requested, we create a stream to one.
     // If we are in the EVALUATE_MODE, we always want to output questions
     // and answers.
-    std::ostream *qa_stream_p = NULL;
+    ostream *qa_stream_p = NULL;
     if (!vm["questions"].defaulted() || (mode == EVALUATE_MODE)) {
       if (s_qa_file == "-") {
-        qa_stream_p = &std::cout;
+        qa_stream_p = &cout;
       } else {
-        qa_stream_p = new std::ofstream(s_qa_file.c_str());
+        qa_stream_p = new ofstream(s_qa_file.c_str());
       }
     }
 
@@ -616,6 +616,8 @@ int main(int argc, char const **argv) {
     // PARSING THE TRAINING PARAMETERS
 
     training_parameters_t training_parameters;
+    bool save_model_as_binary = false;
+
     if ((mode == TRAIN_MODE) && !maxentparams_file.empty()) {
 
       fs::ifstream maxentparams_stream(maxentparams_file);
@@ -632,6 +634,8 @@ int main(int argc, char const **argv) {
               po::value<double>(&training_parameters.smoothing_coefficient))
           ("convergence_tolerance",
               po::value<double>(&training_parameters.convergence_tolerance))
+          ("save_as_binary",
+              po::value<bool>(&save_model_as_binary))
           ;
 
       po::variables_map maxent_vm;
@@ -852,9 +856,9 @@ int main(int argc, char const **argv) {
         // Open the files,...
         fs::path output_file_path(other_file);
 
-        std::istream *input_stream_p = (*input_file == "-") ? &std::cin
+        istream *input_stream_p = (*input_file == "-") ? &cin
                                        : new fs::ifstream(input_file_path);
-        std::ostream *output_stream_p = (*input_file == "-") ? &std::cout
+        ostream *output_stream_p = (*input_file == "-") ? &cout
                                         : new fs::ofstream(output_file_path);
 
         // restore the pipes,...
@@ -907,7 +911,8 @@ int main(int argc, char const **argv) {
     // has accumulated all the required questions and answers, so we can hand
     // it over to the Maxent toolkit to do the rest.
     if (mode == TRAIN_MODE) {
-      classifier_p->train_model(training_parameters, model_path.native());
+      classifier_p->train_model(training_parameters, model_path.native(),
+                                save_model_as_binary);
     }
 
     lt_dlexit();

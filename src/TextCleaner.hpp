@@ -16,17 +16,30 @@ namespace trtok {
 
 /* The TextCleaner class will be responsible for decoding the input text,
  * stripping off the XML markup and expanding the entities. The class sends
- * the unicode text encoded in UTF-8 to an ostream specified during construction
- * and posts the changes done to the input to a cutout queue so that the XML
- * and entities may be reconstructed on output. */
+ * the unicode text encoded in UTF-8 to an opipestream specified during
+ * construction and posts the changes done to the input to a cutout queue so
+ * that the XML and entities may be reconstructed on output. */
 class TextCleaner
 {
+
 public:
-  TextCleaner(pipes::opipestream *output_stream_p,
+  TextCleaner(/* The pipestream to which the cleaned text in UTF-8 is sent;
+                 the pipestream is closed after processing all of the input */
+              pipes::opipestream *output_stream_p,
+              /* The name of the input encoding */
               std::string const &input_encoding,
+              /* Whether XML tags should be removed from the input for the
+                 duration of the processing and then reinserted. */
               bool hide_xml,
+              /* Whether entities should be expanded for the duration of the
+                 processing. */
               bool expand_entities,
+              /* Whether entities, which are expanded by the TextCleaner,
+                 should be kept expanded permanently. */
               bool keep_entities_expanded = false,
+              /* An optional queue for communicating destructive operations
+                 such as XML removal or entity expansion to the output
+                 formatter so they can be undone later. */
               tbb::concurrent_bounded_queue<cutout_t> *cutout_queue_p = NULL):
     m_output_stream_p(output_stream_p),
     m_input_encoding(input_encoding),
@@ -39,10 +52,13 @@ public:
       prepare_entity_map();
   }
 
+  // setup changes the input stream when another file is to be processed.
   void setup(std::istream *input_stream_p) {
     m_input_stream_p = input_stream_p;
   }
 
+  // do_word reads everything from the input stream and writes the cleaned
+  // vesion to the output stream.
   void do_work();
 
 private:

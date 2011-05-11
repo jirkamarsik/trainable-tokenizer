@@ -7,13 +7,13 @@ namespace trtok {
 
 class alignment_exception: public std::exception {
 public:
-	alignment_exception(char const *message) : m_message(message) {}
+    alignment_exception(char const *message) : m_message(message) {}
 
-	virtual const char* what() const throw() {
-		return m_message;
-	}
+    virtual const char* what() const throw() {
+        return m_message;
+    }
 private:
-	char const *m_message;
+    char const *m_message;
 };
 
 }

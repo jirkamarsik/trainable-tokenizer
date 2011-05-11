@@ -1,68 +1,95 @@
 token {
-	TEXT;
-	ENTITY;
-	XML;
+    TEXT;
+    ENTITY;
+    XML;
 }
 
 define {
-	XML_NAME_START_CHAR ":"|[A-Z]|"_"|[a-z]|[\UC0-\UD6]|[\UD8-\UF6]|[\UF8-\U2FF]|[\U370-\U37D]|[\U37F-\U1FFF]|[\U200C-\U200D]|[\U2070-\U218F]|[\U2C00-\U2FEF]|[\U3001-\UD7FF]|[\UF900-\UFDCF]|[\UFDF0-\UFFFD]|[\U10000-\UEFFFF]
-	XML_NAME_CHAR {XML_NAME_START_CHAR}|"-"|"."|[0-9]|\UB7|[\U0300-\U036F]|[\U203F-\U2040]
-	XML_NAME {XML_NAME_START_CHAR}{XML_NAME_CHAR}*
-	ENTITY &{XML_NAME};
-	CHARREF &#[0-9]+;|&#x[0-9a-fA-F]+;
+  XML_NAME_START_CHAR ":"|[A-Z]|"_"|[a-z]|[\UC0-\UD6]|[\UD8-\UF6]|[\UF8-\U2FF]|[\U370-\U37D]|[\U37F-\U1FFF]|[\U200C-\U200D]|[\U2070-\U218F]|[\U2C00-\U2FEF]|[\U3001-\UD7FF]|[\UF900-\UFDCF]|[\UFDF0-\UFFFD]|[\U10000-\UEFFFF]
+  XML_NAME_CHAR {XML_NAME_START_CHAR}|"-"|"."|[0-9]|\UB7|[\U0300-\U036F]|[\U203F-\U2040]
+  XML_NAME {XML_NAME_START_CHAR}{XML_NAME_CHAR}*
+  ENTITY &{XML_NAME};
+  CHARREF &#[0-9]+;|&#x[0-9a-fA-F]+;
 }
 
 header {
 #include "configuration.hpp"
 
 #define flush_accumulator_noxml() {\
-					self.token_p()->set_number(self.nonblanks_read);\
-					self_accumulator_flush(QUEX_PREPROC_NOXML_TEXT);\
-					self.nonblanks_read = 0;\
-					self.accumulator_size = 0;\
-				}
+    self.token_p()->set_number(self.nonblanks_read);\
+    self_accumulator_flush(QUEX_PREPROC_NOXML_TEXT);\
+    self.nonblanks_read = 0;\
+    self.accumulator_size = 0;\
+}
+
 }
 
 body {
-	/* accumulator_size gives the number of characters stored in the accumulator
-	so we know when to flush it. nonblanks_read tells us how many of the characters
-	in the accumulator are nonblank. */
-	int accumulator_size, nonblanks_read;
-	bool expand_entities;
+  /* accumulator_size gives the number of characters stored in the accumulator
+    so we know when to flush it. nonblanks_read tells us how many of the
+    characters in the accumulator are nonblank. */
+  int accumulator_size, nonblanks_read;
+  bool expand_entities;
 }
 
 init {
-	self.accumulator_size = 0;
-	self.nonblanks_read = 0;
-	self.expand_entities = true;
+    self.accumulator_size = 0;
+    self.nonblanks_read = 0;
+    self.expand_entities = true;
 }
 
 mode PREPROCESS {
-	\P{White_Space}+			{ if (self.accumulator_size + LexemeL > ACCUMULATOR_CAPACITY)
-							flush_accumulator_noxml();
-						  self_accumulator_add(Lexeme, LexemeEnd);
-						  self.accumulator_size += LexemeL; }
-	[:inverse(\P{White_Space},[&]):]+	{ if (self.accumulator_size + LexemeL > ACCUMULATOR_CAPACITY)
-							flush_accumulator_noxml();
-						  self_accumulator_add(Lexeme, LexemeEnd);
-						  self.accumulator_size += LexemeL;
-						  self.nonblanks_read += LexemeL; }
-	&					{ if (self.accumulator_size + LexemeL > ACCUMULATOR_CAPACITY)
-							flush_accumulator_noxml();
-						  self_accumulator_add(Lexeme, LexemeEnd);
-						  self.accumulator_size += LexemeL;
-						  self.nonblanks_read += LexemeL; }
-	{ENTITY}|{CHARREF}			{ if (self.expand_entities) {
-							if (self.accumulator_size > 0)
-								flush_accumulator_noxml();
-							self_send1(QUEX_PREPROC_NOXML_ENTITY, Lexeme); }
-						  else {
-						  	if (self.accumulator_size + LexemeL > ACCUMULATOR_CAPACITY)
-								flush_accumulator_noxml();
-							self_accumulator_add(Lexeme, LexemeEnd);
-							self.accumulator_size += LexemeL;
-							self.nonblanks_read += LexemeL; } }
-	<<EOF>>					{ if (self.accumulator_size > 0)
-							flush_accumulator_noxml();
-						  self_send(QUEX_PREPROC_NOXML_TERMINATION); }
+
+  \P{White_Space}+
+        {
+          if (self.accumulator_size + LexemeL > ACCUMULATOR_CAPACITY) {
+            flush_accumulator_noxml();
+          }
+          self_accumulator_add(Lexeme, LexemeEnd);
+          self.accumulator_size += LexemeL;
+        }
+
+  [:inverse(\P{White_Space},[&]):]+
+        {
+          if (self.accumulator_size + LexemeL > ACCUMULATOR_CAPACITY)
+            flush_accumulator_noxml();
+          self_accumulator_add(Lexeme, LexemeEnd);
+          self.accumulator_size += LexemeL;
+          self.nonblanks_read += LexemeL;
+        }
+
+  &
+        {
+          if (self.accumulator_size + LexemeL > ACCUMULATOR_CAPACITY) {
+            flush_accumulator_noxml();
+          }
+          self_accumulator_add(Lexeme, LexemeEnd);
+          self.accumulator_size += LexemeL;
+          self.nonblanks_read += LexemeL;
+        }
+
+  {ENTITY}|{CHARREF}
+        {
+          if (self.expand_entities) {
+              if (self.accumulator_size > 0) {
+                flush_accumulator_noxml();
+              }
+              self_send1(QUEX_PREPROC_NOXML_ENTITY, Lexeme);
+          } else {
+              if (self.accumulator_size + LexemeL > ACCUMULATOR_CAPACITY) {
+                flush_accumulator_noxml();
+              }
+              self_accumulator_add(Lexeme, LexemeEnd);
+              self.accumulator_size += LexemeL;
+              self.nonblanks_read += LexemeL;
+          }
+        }
+
+  <<EOF>>
+        {
+          if (self.accumulator_size > 0) {
+            flush_accumulator_noxml();
+          }
+          self_send(QUEX_PREPROC_NOXML_TERMINATION);
+        }
 }

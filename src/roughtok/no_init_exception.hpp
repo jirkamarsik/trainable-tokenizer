@@ -7,13 +7,13 @@ namespace trtok {
 
 class no_init_exception: public std::exception {
 public:
-	no_init_exception(char const *message) : m_message(message) {}
+    no_init_exception(char const *message) : m_message(message) {}
 
-	virtual const char* what() const throw() {
-		return m_message;
-	}
+    virtual const char* what() const throw() {
+        return m_message;
+    }
 private:
-	char const *m_message;
+    char const *m_message;
 };
 
 }

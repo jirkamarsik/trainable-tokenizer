@@ -8,30 +8,32 @@ typedef boost::uint32_t uint32_t;
 
 #include "trtok_clean_entities_EntityCleaner"
 
+using namespace std;
+
 namespace trtok {
 
-inline std::string unicode_to_utf8(std::basic_string<uint32_t> const &str)
+inline string unicode_to_utf8(basic_string<uint32_t> const &str)
 {
-            return clean_entities::EntityCleaner_unicode_to_char(str);
+    return clean_entities::EntityCleaner_unicode_to_char(str);
 }
 
 inline bool is_whitespace(uint32_t c) {
-	return ((c >= 0x0009) && (c <= 0x000D)) ||
-                (c == 0x0020) ||
-                (c == 0x0085) ||
-                (c == 0x00A0) ||
-                (c == 0x1680) ||
-                (c == 0x180E) ||
-               ((c >= 0x2000) && c <= (0x200A)) ||
-               ((c >= 0x2028) && (c <= 0x2029)) ||
-                (c == 0x202F) ||
-                (c == 0x205F) ||
-                (c == 0x3000);
+    return ((c >= 0x0009) && (c <= 0x000D)) ||
+            (c == 0x0020) ||
+            (c == 0x0085) ||
+            (c == 0x00A0) ||
+            (c == 0x1680) ||
+            (c == 0x180E) ||
+           ((c >= 0x2000) && c <= (0x200A)) ||
+           ((c >= 0x2028) && (c <= 0x2029)) ||
+            (c == 0x202F) ||
+            (c == 0x205F) ||
+            (c == 0x3000);
 }
 
 inline bool is_newline(uint32_t c) {
-	return  (c == 0x0A) ||
-                (c == 0x0D);
+    return  (c == 0x0A) ||
+            (c == 0x0D);
 }
 
 inline uint32_t utf8char_to_unicode(char const *buffer, size_t &offset) {
@@ -72,9 +74,9 @@ inline uint32_t utf8char_to_unicode(char const *buffer, size_t &offset) {
     }
 }
 
-inline std::basic_string<uint32_t> utf8_to_unicode(std::string const &str) {
-    std::string::size_type i = 0;
-    std::basic_string<uint32_t> codepoints;
+inline basic_string<uint32_t> utf8_to_unicode(string const &str) {
+    string::size_type i = 0;
+    basic_string<uint32_t> codepoints;
 
     while (i < str.length()) {
         codepoints.push_back(utf8char_to_unicode(str.data(), i));

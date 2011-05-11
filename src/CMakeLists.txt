@@ -2,7 +2,8 @@ cmake_minimum_required (VERSION 2.8)
 project (TrainableTokenizer)
 
 
-set (CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/CMake/")
+set (CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH}
+                      "${CMAKE_CURRENT_SOURCE_DIR}/CMake/")
 set (LIBS)
 
 set (Boost_USE_STATIC_LIBS ON)
@@ -76,10 +77,14 @@ include_directories (${LTDL_INCLUDE_DIRS})
 link_directories (${LTDL_LIBRARY_DIRS})
 set (LIBS ${LIBS} ${LTDL_LIBRARIES})
 
-set (CHUNK_SIZE 100 CACHE STRING "Number of rough tokens constituting a work unit in the pipeline.")
-set (WORK_UNIT_COUNT 1 CACHE STRING "The number of token chunks flowing through the pipeline.")
-set (ACCUMULATOR_CAPACITY 256 CACHE STRING "Maximum size of Quex's accumulator in the TextCleaner stage.")
-set (ENCODER_BUFFER_SIZE 512 CACHE STRING "The size of the buffer used to hold characters for encoding on output.")
+set (CHUNK_SIZE 256 CACHE STRING
+     "Number of rough tokens constituting a work unit in the pipeline.")
+set (WORK_UNIT_COUNT 8 CACHE STRING
+     "The number of token chunks flowing through the pipeline.")
+set (ACCUMULATOR_CAPACITY 256 CACHE STRING
+     "Maximum size of Quex's accumulator in the TextCleaner stage.")
+set (ENCODER_BUFFER_SIZE 512 CACHE STRING
+     "The size of the buffer used to hold characters for encoding on output.")
 set (QUEX_TOKEN_ID_OFFSET 10000)
 
 
@@ -89,29 +94,31 @@ file (MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/code)
 
 
 configure_file (${CMAKE_CURRENT_SOURCE_DIR}/configuration.hpp.in
-		${CMAKE_CURRENT_BINARY_DIR}/configured_headers/configuration.hpp
-		ESCAPE_QUOTES)
+               ${CMAKE_CURRENT_BINARY_DIR}/configured_headers/configuration.hpp
+               ESCAPE_QUOTES)
 
-configure_file (${CMAKE_CURRENT_SOURCE_DIR}/rough_tok/rough_tok_wrapper.cpp.in
-		${CMAKE_CURRENT_BINARY_DIR}/code/rough_tok_wrapper.cpp)
+configure_file (${CMAKE_CURRENT_SOURCE_DIR}/roughtok/roughtok_wrapper.cpp.in
+                ${CMAKE_CURRENT_BINARY_DIR}/code/roughtok_wrapper.cpp)
 
-configure_file (${CMAKE_CURRENT_SOURCE_DIR}/rough_tok/rough_tok_wrapper.hpp
-		${CMAKE_CURRENT_BINARY_DIR}/code/rough_tok_wrapper.hpp COPYONLY)
+configure_file (${CMAKE_CURRENT_SOURCE_DIR}/roughtok/roughtok_wrapper.hpp
+                ${CMAKE_CURRENT_BINARY_DIR}/code/roughtok_wrapper.hpp COPYONLY)
 
-configure_file (${CMAKE_CURRENT_SOURCE_DIR}/rough_tok/no_init_exception.hpp
-		${CMAKE_CURRENT_BINARY_DIR}/code/no_init_exception.hpp COPYONLY)
+configure_file (${CMAKE_CURRENT_SOURCE_DIR}/roughtok/no_init_exception.hpp
+                ${CMAKE_CURRENT_BINARY_DIR}/code/no_init_exception.hpp
+                COPYONLY)
 
 configure_file (${CMAKE_CURRENT_SOURCE_DIR}/CMake/FindICU.cmake
-		${CMAKE_CURRENT_BINARY_DIR}/code/FindICU.cmake COPYONLY)
+                ${CMAKE_CURRENT_BINARY_DIR}/code/FindICU.cmake COPYONLY)
 
 configure_file (${CMAKE_CURRENT_SOURCE_DIR}/CMake/FindLIBICONV.cmake
-		${CMAKE_CURRENT_BINARY_DIR}/code/FindLIBICONV.cmake COPYONLY)
+                ${CMAKE_CURRENT_BINARY_DIR}/code/FindLIBICONV.cmake COPYONLY)
 
-configure_file (${CMAKE_CURRENT_SOURCE_DIR}/rough_tok/CMakeLists.txt.in
-		${CMAKE_CURRENT_BINARY_DIR}/code/CMakeLists.txt @ONLY)
+configure_file (${CMAKE_CURRENT_SOURCE_DIR}/roughtok/CMakeLists.txt.in
+                ${CMAKE_CURRENT_BINARY_DIR}/code/CMakeLists.txt @ONLY)
 
 
-find_program (QUEX quex quex.bat quex-exe.py REQUIRED HINTS ENV QUEX_PATH DOC "Path to Quex's executable.")
+find_program (QUEX quex quex.bat quex-exe.py REQUIRED HINTS ENV QUEX_PATH
+              DOC "Path to Quex's executable.")
 if (USE_ICONV)
   set (QUEX_CONVERTER "--iconv")
 elseif (USE_ICU)
@@ -119,51 +126,54 @@ elseif (USE_ICU)
 endif (USE_ICONV)
 
 set (QUEX_ENTITY quex_files/trtok_clean_entities_EntityCleaner)
-add_custom_command (OUTPUT ${QUEX_ENTITY} ${QUEX_ENTITY}.cpp ${QUEX_ENTITY}-token
-			   ${QUEX_ENTITY}-configuration ${QUEX_ENTITY}-token_ids
-		    COMMAND quex --mode-files		${CMAKE_CURRENT_SOURCE_DIR}/clean_entities.qx
-				 --engine	        trtok::clean_entities::EntityCleaner
-				 --buffer-element-size	4
-				 --token-prefix		QUEX_PREPROC_NOXML_
-				 --odir			${CMAKE_CURRENT_BINARY_DIR}/quex_files
-				 ${QUEX_CONVERTER}
-		    DEPENDS clean_entities.qx VERBATIM
-		    COMMENT "Building EntityCleaner with quex")
+add_custom_command (OUTPUT ${QUEX_ENTITY} ${QUEX_ENTITY}.cpp
+                           ${QUEX_ENTITY}-token ${QUEX_ENTITY}-configuration
+                           ${QUEX_ENTITY}-token_ids
+    COMMAND quex --mode-files    ${CMAKE_CURRENT_SOURCE_DIR}/clean_entities.qx
+                 --engine                 trtok::clean_entities::EntityCleaner
+                 --buffer-element-size                                       4
+                 --token-prefix                            QUEX_PREPROC_NOXML_
+                 --odir                 ${CMAKE_CURRENT_BINARY_DIR}/quex_files
+                 ${QUEX_CONVERTER}
+    DEPENDS clean_entities.qx VERBATIM
+    COMMENT "Building EntityCleaner with quex")
 
 set (QUEX_XML quex_files/trtok_clean_xml_XmlCleaner)
 add_custom_command (OUTPUT ${QUEX_XML} ${QUEX_XML}.cpp ${QUEX_XML}-token
-			   ${QUEX_XML}-configuration ${QUEX_XML}-token_ids
-		    COMMAND quex --mode-files		${CMAKE_CURRENT_SOURCE_DIR}/clean_xml.qx
-			         --engine		trtok::clean_xml::XmlCleaner
-				 --buffer-element-size	4
-				 --token-prefix		QUEX_PREPROC_WITHXML_
-				 --odir			${CMAKE_CURRENT_BINARY_DIR}/quex_files
-				 ${QUEX_CONVERTER}
-		    DEPENDS clean_xml.qx VERBATIM
-		    COMMENT "Building XmlCleaner with quex")
+                           ${QUEX_XML}-configuration ${QUEX_XML}-token_ids
+    COMMAND quex --mode-files         ${CMAKE_CURRENT_SOURCE_DIR}/clean_xml.qx
+                 --engine                         trtok::clean_xml::XmlCleaner
+                 --buffer-element-size                                       4
+                 --token-prefix                          QUEX_PREPROC_WITHXML_
+                 --odir                 ${CMAKE_CURRENT_BINARY_DIR}/quex_files
+                 ${QUEX_CONVERTER}
+    DEPENDS clean_xml.qx VERBATIM
+    COMMENT "Building XmlCleaner with quex")
 
 set (QUEX_FEATURES quex_files/trtok_read_features_FeaturesReader)
-add_custom_command (OUTPUT ${QUEX_FEATURES} ${QUEX_FEATURES}.cpp ${QUEX_FEATURES}-token
-                           ${QUEX_FEATURES}-configuration ${QUEX_FEATURES}-token_ids
-                    COMMAND quex --mode-files 		${CMAKE_CURRENT_SOURCE_DIR}/read_features.qx
-				 --engine		trtok::read_features::FeaturesReader
-                                 --buffer-element-size  4
-				 --token-prefix		QUEX_FEATURES_
-				 --odir			${CMAKE_CURRENT_BINARY_DIR}/quex_files
-                                 ${QUEX_CONVERTER}
-		    DEPENDS read_features.qx VERBATIM
-		    COMMENT "Building FeaturesReader with quex")
+add_custom_command (OUTPUT ${QUEX_FEATURES} ${QUEX_FEATURES}.cpp
+                           ${QUEX_FEATURES}-token
+                           ${QUEX_FEATURES}-configuration
+                           ${QUEX_FEATURES}-token_ids
+    COMMAND quex --mode-files     ${CMAKE_CURRENT_SOURCE_DIR}/read_features.qx
+                 --engine                 trtok::read_features::FeaturesReader
+                 --buffer-element-size                                       4
+                 --token-prefix                                 QUEX_FEATURES_
+                 --odir                 ${CMAKE_CURRENT_BINARY_DIR}/quex_files
+                 ${QUEX_CONVERTER}
+    DEPENDS read_features.qx VERBATIM
+    COMMENT "Building FeaturesReader with quex")
 
 
 include_directories (${CMAKE_CURRENT_SOURCE_DIR}
-		     ${CMAKE_CURRENT_BINARY_DIR}/configured_headers
-		     ${CMAKE_CURRENT_BINARY_DIR}/quex_files
-		     $ENV{QUEX_PATH})
+                     ${CMAKE_CURRENT_BINARY_DIR}/configured_headers
+                     ${CMAKE_CURRENT_BINARY_DIR}/quex_files
+                     $ENV{QUEX_PATH})
 
 add_definitions ("-DQUEX_OPTION_ASSERTS_WARNING_MESSAGE_DISABLED")
 
 set (SRCS main.cpp TextCleaner.cpp ${QUEX_ENTITY}.cpp ${QUEX_XML}.cpp
-    rough_tok_compile.cpp RoughTokenizer.cpp OutputFormatter.cpp
+    roughtok_compile.cpp RoughTokenizer.cpp OutputFormatter.cpp
     Encoder.cpp FeatureExtractor.cpp Classifier.cpp ${QUEX_FEATURES}.cpp
     read_features_file.cpp SimplePreparer.cpp)
 

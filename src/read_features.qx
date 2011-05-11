@@ -1,7 +1,3 @@
-header {
-#include <iostream>
-}
-
 token {
   NUMBER;
   DOUBLEDOT;
