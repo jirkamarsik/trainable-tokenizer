@@ -36,7 +36,8 @@ void* RoughTokenizer::operator()(void*) {
 
   // Pre-condition: m_last_rough_tok.text contains a non-empty string with
   // the text of the next token to be placed in the chunk
-  while ((n_tokens < CHUNK_SIZE) && (m_last_rough_tok.type_id != TERMINATION_ID)) {
+  while ((n_tokens < CHUNK_SIZE)
+   && (m_last_rough_tok.type_id != TERMINATION_ID)) {
 
     chunk_p->tokens.push_back(token_t());
     token_t &cur_token = chunk_p->tokens[n_tokens];

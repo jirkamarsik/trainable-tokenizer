@@ -692,6 +692,7 @@ int main(int argc, char const **argv) {
 
       rough_tokenizer_p = new RoughTokenizer(rough_lexer_wrapper);
       rough_tokenizer_p->setup(input_pipe_from_p, "UTF-8");
+      pipeline.add_filter(*rough_tokenizer_p);
 
       annot_pipe_p = new pipes::pipe(pipes::pipe::limited_capacity);
       annot_pipe_to_p = new pipes::opipestream(*annot_pipe_p);
@@ -704,6 +705,7 @@ int main(int argc, char const **argv) {
       feature_extractor_p = new FeatureExtractor(n_basic_properties,
                                                  regex_properties,
                                                  word_to_enum_props);
+      pipeline.add_filter(*feature_extractor_p);
 
       classifier_p = new Classifier(mode, prop_id_to_name, precontext,
                                     postcontext, features_mask,
@@ -712,9 +714,6 @@ int main(int argc, char const **argv) {
       if (mode == EVALUATE_MODE) {
         classifier_p->load_model(model_path.native());
       }
-
-      pipeline.add_filter(*rough_tokenizer_p);
-      pipeline.add_filter(*feature_extractor_p);
       pipeline.add_filter(*classifier_p);
 
     } else if ((mode == PREPARE_MODE) || (mode == TOKENIZE_MODE)) {
@@ -741,8 +740,7 @@ int main(int argc, char const **argv) {
       if ((mode == PREPARE_MODE) && (qa_stream_p == NULL)) {
         simple_preparer_p = new SimplePreparer();
         pipeline.add_filter(*simple_preparer_p);
-      }
-      else {
+      } else {
         feature_extractor_p = new FeatureExtractor(n_basic_properties,
                                                    regex_properties,
                                                    word_to_enum_props);
@@ -751,9 +749,8 @@ int main(int argc, char const **argv) {
         classifier_p = new Classifier(mode, prop_id_to_name, precontext,
                                       postcontext, features_mask,
                                       combined_features, qa_stream_p);
-        pipeline.add_filter(*classifier_p);
-
         classifier_p->load_model(model_path.native());
+        pipeline.add_filter(*classifier_p);
       } //if ((mode == PREPARE_MODE) && (qa_stream_p == NULL))
 
       output_pipe_p = new pipes::pipe(pipes::pipe::limited_capacity);
@@ -767,6 +764,7 @@ int main(int argc, char const **argv) {
       pipeline.add_filter(*output_formatter_p);
 
       encoder_p = new Encoder(output_pipe_from_p, s_encoding);
+
     } // if ((mode == PREPARE_MODE) || (mode == TOKENIZE_MODE))
     
     

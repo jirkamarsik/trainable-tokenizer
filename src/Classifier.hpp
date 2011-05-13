@@ -108,6 +108,7 @@ public:
     void process_center_token(chunk_t *out_chunk_p);
     void align_chunk_with_solution(chunk_t *in_chunk_p);
     virtual void* operator()(void *input_p);
+
 private:
     bool consume_whitespace();
     void report_alignment_warning(std::string occurence_type,
