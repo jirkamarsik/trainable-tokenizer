@@ -34,14 +34,14 @@ You will need
   rt.
   Debian packages: libgfortran3 (installed as a dependency of gfortran)
 
-* Quex (version >= 0.58.3)
+* Quex (version > 0.58.3)
   The lexical analyzer generator used during both compile time and runtime. Any
   version past 0.58.3 should be fine. However, the current 0.58.3 has a little
   fatal bug, which wouldn't let you compile trtok on some machines, so I
   recommend to use the fixed version at github.com/Jurassic/quex until a newer
   version is released. The official releases can be found at http://quex.org.
 
-* libtool dynamic linking library (with headers)
+* libtool dynamic loading library (with headers)
   A platform-independent wrapper for loading shared modules during runtime.
   Debian packages: libltdl-dev
 

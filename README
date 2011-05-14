@@ -1,1 +1,204 @@
-Success!
+trtok - a fast and trainable tokenizer for natural languages
+------------------------------------------------------------
+
+  Trtok is a very universal performance oriented tokenizer for processing
+natural languages. It reads text and tries to correctly detect sentence
+boundaries and divide the text into tokens.
+
+  Trtok doesn't implement any specific heuristic to perform these tasks,
+instead it lets the user define rules for potential joining and splitting of
+words into tokens and sentences. The final decision whether to split or join
+words and whether to break sentences is left to a conditional probabilistic
+model which is trained from user-supplied annotated data. The way the trainer
+understands the data can be extensively customized by the user who can define
+his own features and specify which features are significant for what tokens.
+
+
+1) Tokenization schemes
+-----------------------
+
+  The user might want to use trtok for processing more than 1 language or for
+  processing 1 language in many ways. These different ways of tokenization are
+  described by "tokenization schemes". Their definitions reside in the
+  "schemes" subdirectory of the installation directory. Every folder inside
+  "schemes" defines a single tokenization scheme by way of various
+  configuration files.
+
+  Tokenization schemes may be nested to represent a sort of scheme inheritance
+  where a scheme inherits all the configuration files of its ancestors unless
+  it redefines them by having a configuration file of the same name.
+
+  a) Rough tokenization rules
+
+    Files with a .split file extension must contain pairs of whitespace
+    delimited regular expressions. Within every position in every word where
+    the prefix leading to the position matches the first expression and the
+    suffix following it matches the second expression the position is marked as
+    a potential token split and the word is split into two temporary rough
+    tokens. 
+
+    Files with a .join extension are similar, but they describe two spans of
+    text which may be potentially joined into a single token if found separated
+    by whitespace.
+
+    Files with a .begin and a .end extension list characters before which,
+    resp. after which, a potential sentence break is marked (and if this
+    potential sentence break occurs within a word, the word is split into two
+    temporary rough tokens). If the newline character is to be a potential
+    sentence beginning or ending character, an empty line is expected in either
+    a .begin file or a .end file.
+
+    The grammar of the regular expressions in .split and .join files is the one
+    used by Quex and described in detail at
+    http://quex.sourceforge.net/doc/html/usage/patterns/context-free.html.
+
+    The .split and .join files may contain comments which are lines that begin
+    with the # symbol.
+
+  b) User-defined properties
+
+    Files with a .rep extension contain a single regular expression from the
+    family of expressions allowed in PCRE (see pcre.org). A rough token is
+    marked as having this property if it can be matched to the regular
+    expression.
+
+    If a rough token's text is exactly the same as a line from a .enump file,
+    then that rough token is marked as having the property defined by that
+    .enump file.
+
+  c) Feature selection
+
+    Every tokenization scheme must have a file named "features". For each rough
+    token in the vicinity of the potential split/join/sentence break, it
+    specifies which features are important for the decision.
+
+    A typical line starts by declaring a set of interesting offsets (0 is the
+    rough token preceding the decision point, -1 the one before it, +1 the one
+    after it, etc...). These offsets are separated by commas and intervals can
+    be used for convenience (e.g. -4,-2..+2,5 selects -4,-2,-1,0,1,2,5).
+
+    After the offsets comes a colon and a comma separated list of properties.
+    The property names are the filenames of their definitions without the
+    extensions and they are limited to the common identifier character set
+    [a-zA-Z0-9_]. The line is closed with a terminating semicolon.
+
+    Apart from these simple features, it is possible to ask for combined
+    features which bundle the value of different properties of tokens at
+    different offsets into a single feature value. These are defined on their
+    own line and are enclosed in parentheses. Inside the parentheses is a "^"
+    separated list of offset:property pairs. If a combined feature takes
+    properties from a single token only, the parenthesized expression can
+    appear on the right-hand side of a typical line instead of a simple
+    property name and the offsets within its definition are omitted.
+
+  d) Maxent training parameters
+
+    More control over the process of training the probabilistic model can be
+    had by manipulating the "maxent.params" file. This file is an INI-style
+    configuration file which lets the user set the following parameters, which
+    get passed directly to the training toolkit.
+
+      event_cutoff=<int>                 All training events which occur less
+            times than event_cutoff are ignored. Default 1.
+
+      n_iterations=<int>                 How many iterations will the iterative
+            method use. Default 15.
+
+      method_name=lbfgs|gis              Which of the two methods L-BFGS or GIS
+            is to be used. L-BFGS is recommended. Default lbfgs.
+
+      smoothing_coefficient=<double>     Sigma, the coefficient in Gaussian
+            smoothing. Default 0 (no smoothing).
+
+      convergence_tolerance=<double>     The model is regarded as convergent
+            when the relative difference between the log-likelihood of the
+            succeeding models is < convergence_tolerance. Default 1e-05.
+
+      save_as_binary=false|true          Whether to save the file in a binary
+            format which is faster to load and smaller if Maxent was compiled
+            with zlib support. Default false.
+
+  e) File lists and filename replacement regular expressions
+
+    Files [prepare|train|tokenize|evaluate].[fl|fnre] are for convenience only
+    and are described later.
+ 
+
+2) Running the tokenizer
+
+  a) Different ways of selecting input
+
+    The first argument passed to the tokenizer selects its mode, which can be
+    either "prepare", "train", "tokenize" or "evaluate". The second argument is
+    a path relative to the directory "schemes" which selects the tokenization
+    scheme to be used. The rest of the arguments are input files and options.
+
+    Input files can be specified explicitly on the command line. More files can
+    be given using the -l (--file-list) option which takes a filepath and adds
+    every line of it as another input file.
+
+    When running in prepare mode or tokenize mode, an output file for each file
+    has to be specified and when running in train mode or evaluate mode, a file
+    with the annotated version has to be specified. These secondary files are
+    selected by taking the input filepath and replacing it using a filename
+    regular expression/replacement string. The filename regular
+    expression/replacement string is specified using the -r (--filename-regexp)
+    option. The strings look like replacement commands in sed, where the first
+    character can be any ASCII character and that character separates the
+    regular expression from the replacement string and also terminates the
+    entire string. Unlike sed, this special character cannot be present
+    anywhere else in the string (no escaping). The breed of regular expressions
+    used here is the one supported in PCRE, the replacement strings contain the
+    placeholders \0, \1... for the entire matched string, first captured
+    sequence...
+
+    If no input file or file lists were given, a default file list named
+    <mode_name>.fl, which is part of the tokenization scheme, is used. If no
+    filename regular expression/replacement string is given, the one in the
+    file named <mode_name>.fnre from the tokenization scheme is used. In both
+    cases <mode_name> is expanded to either "prepare", "train", "tokenize" or
+    "evaluate" depending on the current mode.
+
+    If no input file or file lists were given and there are no default file
+    lists defined by the tokenization scheme, then the tokenizer processes the
+    standard input and writes to the standard output. This is however only
+    possible for the prepare and tokenize modes. The standard input/output
+    combo can also be explicitly selected by specifying the file "-" on the
+    command line.
+
+  b) Different modes of execution
+
+    In prepare mode, the tokenizer reads the input, splits into rough tokens
+    and then outputs it with all possible splits and sentence breaks performed.
+    This format might be handy for manual annotators who then only have to join
+    together parts of tokens and sentences.
+
+    In train mode, the tokenizer reads both the input and its annotated
+    version. It uses the annotated data to get pairs of questions (values of
+    features in a given context surrounding a decision point) and answers
+    (whether the decision point is to become a joining of tokens, a splitting
+    of tokens or a sentence break). These pairs are then used to train the
+    probabilistic model and store it in a file under the "build" directory.
+
+    In tokenize mode, the tokenizer relies on the presence of an already
+    trained model and uses it to classify every decision point in the input
+    file and output the tokenized and segmented text.
+
+    In evaluate mode, the tokenizer reads both the input and its annotation as
+    in train mode, but now it also queries the trained model for an opinion and
+    compares it with the one found in the annotated data. The tokenizer outputs
+    a log of every question and both the guessed and correct answers for later
+    analysis. The "analyze" script provided with trtok will let you read this
+    output and determine the accuracy of your system.
+
+  c) Different options
+
+    If you launch trtok with no command line arguments, you will get a summary
+    of all the supported command line options and their meaning. These include
+    options for setting the encoding of the input and output files, options for
+    controlling the output (preserving the tokens, segments or paragraphs of
+    the input file), the preprocessing of input (if entities are to be expanded
+    for the duration of the tokenization and if they are to be kept expanded in
+    the output; if XML should be hidden from tokenization), options for logging
+    the questions and answers to a third file and an option regarding the
+    verbosity of the tokenizer's output.

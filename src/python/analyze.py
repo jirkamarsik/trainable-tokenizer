@@ -19,7 +19,10 @@ for line in fileinput.input():
       features.append( (feature_string, 1.0) )
     # a valued feature (length)
     elif '=' in feature_string:
-      feature, eq, value = feature_string.rpartition('=')
+      feature, eq, value = feature_string.partition('=')
+      # WARNING: In the case of %Word, the value isn't the expected float (1.0)
+      #          as is the case with every other feature, bit instead the value
+      #          is equal to the text of the token. This might be unwieldy.
       features.append( (feature, value) )
     # a simple binary feature
     else:
