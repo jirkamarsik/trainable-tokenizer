@@ -87,6 +87,11 @@ set (ENCODER_BUFFER_SIZE 512 CACHE STRING
      "The size of the buffer used to hold characters for encoding on output.")
 set (QUEX_TOKEN_ID_OFFSET 10000)
 
+set (CMAKE_INSTALL_PREFIX "NOT-USED" CACHE STRING "Not used, see INSTALL_DIR")
+set (INSTALL_DIR $ENV{HOME}/trtok CACHE STRING
+     "The installation directory for trtok.")
+mark_as_advanced (CMAKE_INSTALL_PREFIX)
+
 
 file (MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/quex_files)
 file (MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/configured_headers)
@@ -115,6 +120,9 @@ configure_file (${CMAKE_CURRENT_SOURCE_DIR}/CMake/FindLIBICONV.cmake
 
 configure_file (${CMAKE_CURRENT_SOURCE_DIR}/roughtok/CMakeLists.txt.in
                 ${CMAKE_CURRENT_BINARY_DIR}/code/CMakeLists.txt @ONLY)
+
+configure_file (${CMAKE_CURRENT_SOURCE_DIR}/python/analyze.py
+                ${CMAKE_CURRENT_BINARY_DIR}/analyze COPYONLY)
 
 
 find_program (QUEX quex quex.bat quex-exe.py REQUIRED HINTS ENV QUEX_PATH
@@ -188,3 +196,12 @@ if (UNIX)
 endif (UNIX)
 
 target_link_libraries (trtok ${LIBS})
+
+
+install (TARGETS trtok DESTINATION ${INSTALL_DIR})
+install (PROGRAMS python/analyze.py DESTINATION ${INSTALL_DIR} RENAME analyze)
+install (DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/code/
+         DESTINATION ${INSTALL_DIR}/code)
+install (DIRECTORY DESTINATION ${INSTALL_DIR}/schemes)
+install (DIRECTORY DESTINATION ${INSTALL_DIR}/build)
+install (CODE "message (\"Don't forget to set the environment variable TRTOK_PATH=${INSTALL_DIR}.\")")

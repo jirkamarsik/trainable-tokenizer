@@ -45,7 +45,9 @@ void Classifier::process_center_token(chunk_t *out_chunk_p) {
     vector< pair<string,float> > context;
     
     // Simple features
-    for (int offset = -m_precontext; offset != m_postcontext + 1; offset++) { int window_offset = WINDOW_OFFSET(offset);
+    for (int offset = -m_precontext; offset != m_postcontext + 1; offset++) {
+
+      int window_offset = WINDOW_OFFSET(offset);
       string offset_str = boost::lexical_cast<string>(offset) + ":";
       token_t &questioned_token = m_window[window_offset];
 
@@ -110,7 +112,7 @@ void Classifier::process_center_token(chunk_t *out_chunk_p) {
          combined_feature != m_combined_features.end();
          combined_feature++) {
       
-      string feature_string = "";
+      string feature_string = "(";
       bool crossed_end_of_input = false;
 
       for (vector< pair<int,int> >::const_iterator
@@ -144,16 +146,19 @@ void Classifier::process_center_token(chunk_t *out_chunk_p) {
               questioned_token.text;
         }
 
-        if (feature_string != "") {
+        if (feature_string != "(") {
           feature_string += "^";
         }
         feature_string += single_feature_string;
       }
 
+      feature_string += ")";
+
       if (!crossed_end_of_input) {
         context.push_back(make_pair(feature_string, 1.0));
       }
     }
+
 
     string true_outcome;
     string predicted_outcome;
@@ -225,6 +230,9 @@ void Classifier::process_center_token(chunk_t *out_chunk_p) {
       for (vector< pair<string,float> >::const_iterator
            feature = context.begin(); feature != context.end(); feature++) {
         *m_qa_stream_p << ' ' << feature->first;
+        if (feature->second != 1.0) {
+          *m_qa_stream_p << '=' << feature->second;
+        }
       }
 
       *m_qa_stream_p << endl;
