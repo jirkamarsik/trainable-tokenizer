@@ -76,33 +76,37 @@ for i, event in enumerate(events):
 
 
 eff_tot = len(events)
-eff_acc = len(eff_success) / eff_tot if eff_tot > 0 else 'no data'
+eff_acc = len(eff_success) / float(eff_tot) if eff_tot > 0 else 'no data'
 
  
 seg_tot = len(seg_tp) + len(seg_tn) + len(seg_fp) + len(seg_fn)
-seg_acc = (len(seg_tp) + len(seg_tn)) / seg_tot if seg_tot > 0 else 'no data'
+seg_acc = (len(seg_tp) + len(seg_tn)) / float(seg_tot) \
+            if seg_tot > 0 else 'no data'
 
 seg_true_t = len(seg_tp) + len(seg_fp)
-seg_prec = len(seg_tp) / seg_true_t if seg_true_t > 0 else 'no data'
+seg_prec = len(seg_tp) / float(seg_true_t) if seg_true_t > 0 else 'no data'
 
 seg_pred_t = len(seg_tp) + len(seg_fn)
-seg_rec = len(seg_tp) / seg_pred_t if seg_pred_t > 0 else 'no data'
+seg_rec = len(seg_tp) / float(seg_pred_t) if seg_pred_t > 0 else 'no data'
 
-seg_fm = 2 * (seg_prec * seg_rec) / (seg_prec + seg_rec) \
-          if seg_prec != 'no data' and seg_rec != 'no data' else 'no data'
+seg_fm = 2 * (seg_prec * seg_rec) / float(seg_prec + seg_rec) \
+          if seg_prec != 'no data' and seg_rec != 'no data' \
+          and seg_prec + seg_rec > 0  else 'no data'
 
 
 tok_tot = len(tok_tp) + len(tok_tn) + len(tok_fp) + len(tok_fn)
-tok_acc = (len(tok_tp) + len(tok_tn)) / tok_tot if tok_tot > 0 else 'no data'
+tok_acc = (len(tok_tp) + len(tok_tn)) / float(tok_tot) \
+            if tok_tot > 0 else 'no data'
 
 tok_true_t = len(tok_tp) + len(tok_fp)
-tok_prec = len(tok_tp) / tok_true_t if tok_true_t > 0 else 'no data'
+tok_prec = len(tok_tp) / float(tok_true_t) if tok_true_t > 0 else 'no data'
 
 tok_pred_t = len(tok_tp) + len(tok_fn)
-tok_rec = len(tok_tp) / tok_pred_t if tok_pred_t > 0 else 'no data'
+tok_rec = len(tok_tp) / float(tok_pred_t) if tok_pred_t > 0 else 'no data'
 
-tok_fm = 2 * (tok_prec * tok_rec) / (tok_prec + tok_rec) \
-          if tok_prec != 'no data' and tok_rec != 'no data' else 'no data'
+tok_fm = 2 * (tok_prec * tok_rec) / float(tok_prec + tok_rec) \
+          if tok_prec != 'no data' and tok_rec != 'no data' \
+          and tok_prec + tok_rec > 0  else 'no data'
 
 
 print('Number of events:', eff_tot)
