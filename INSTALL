@@ -1,0 +1,143 @@
+You will need
+-------------
+
+* CMake (version >= 2.8)
+  Needed to build and install the project. Either the curses interface 'ccmake'
+  or the Qt version is also recommended for easier configuration. A build
+  system for which a CMake generator exists (e.g. make) and the compiler tools
+  for C++ are of course a necessity as well (tested on gcc 4.5.3).
+  Debian packages: g++, make, cmake, ccmake
+
+* Python
+  Needed to run the analyze script. The script was aimed at Python 3.2, but
+  was later changed to support Python 2.6 as well.
+  Debian packages: python3 or python
+
+* Maxent Modeling Toolkit for Python and C++ (Le Zhang)
+  I recommend the version at github.com/Jurassic/maxent which fixes some
+  critical overflow bugs. I also recommend that you have a Fortran compiler
+  installed so that the L-BFGS procedure is also compiled. The zlib libraries
+  and headers will also allow you to save the trained model in a compressed
+  binary format (not required). The original release can be found at
+  http://homepages.inf.ed.ac.uk/lzhang10/maxent_toolkit.html.
+  Debian packages: gfortran (for the Fortran compiler), zlib1g, zlib1g-dev (for
+                   the optional zlib support)
+
+* GNU Fortran libraries
+  When on a UNIX-like system which links shared libraries the way the gold
+  linker does (Debian Wheezy, Fedora), some library dependencies required by
+  Maxent and Boost.Thread have to be linked by us and so trtok always tries to
+  link with the GNU Fortran libraries on a UNIX-like system. This is because we
+  assume most users will have Maxent compiled with L-BFGS and this is one of
+  the cases where we have to explicitly link the libraries. The other
+  explicitly linked libraries which are presumed to be present are pthread and
+  rt.
+  Debian packages: libgfortran3 (installed as a dependency of gfortran)
+
+* Quex (version >= 0.58.3)
+  The lexical analyzer generator used during both compile time and runtime. Any
+  version past 0.58.3 should be fine. However, the current 0.58.3 has a little
+  fatal bug, which wouldn't let you compile trtok on some machines, so I
+  recommend to use the fixed version at github.com/Jurassic/quex until a newer
+  version is released. The official releases can be found at http://quex.org.
+
+* libtool dynamic linking library (with headers)
+  A platform-independent wrapper for loading shared modules during runtime.
+  Debian packages: libltdl-dev
+
+* PCRE (Perl Compliant Regular Expression) (with headers)
+  The library built with the C++ wrapper, support for UTF-8 and support for
+  Unicode characters sets is needed. The source can be downloaded at
+  http://pcre.org.
+  Debian packages: libpcre3, libpcre3-dev, libpcrecpp0
+
+* Boost libraries (version >= 1.46, with headers)
+  The following compiled libraries are needed: system, filesystem,
+  program_options, thread. A lot more headers-only libraries are required so I
+  recommend installing the whole lot.
+  Debian packages: libboost1.46-all-dev (found in Debian Wheezy and later,
+                   also known as libboost-all-dev; if having trouble
+                   installing from packages, try the upstream source
+                   distribution)
+
+* Threading Building Blocks (with headers)
+  This library allows us to harness multiple threads with great ease. It should
+  be readily available for all platforms at http://threadingbuildingblocks.org.
+  Debian packages: libtbb2, libtbb-dev
+
+* ICU or iconv (with headers)
+  Any of these two libraries will do. These libraries are needed by Quex and by
+  trtok himself when decoding and encoding the character stream. On my Debian
+  machine iconv is already builtin (to the point where I can't even choose
+  whether I want to link it) and I suppose this will be the case with a lot of
+  GNU/Linux distributions. On the other hand, ICU should be present on Windows
+  machines. Sources for ICU are at http://site.icu-project.org.
+  Debian packages: libicu44, libicu-dev (optional, as Debian comes with iconv
+                   already)
+
+
+Installing dependecies
+----------------------
+
+On Debian, simply issue
+
+  aptitude install g++ make cmake ccmake python3 gfortran zlib1g-dev \
+                   libltdl-dev libpcre3-dev libpcrecpp0 libboost-all-dev \
+                   libtbb-dev
+
+as root. When using a distribution older than Debian Wheezy, you might need to
+install Boost 1.46 from upstream due to changes in the FileSystem API.
+
+For maxent, git clone the repository at git://github.com/Jurassic/maxent.git or
+download the tarred source from the web interface at
+https://github.com/Jurassic/maxent and follow the installation directions. You
+should end up with the compiled library in one of your lib directories and the
+headers somewhere in your include directories.
+
+For Quex, if there is still no new version since 0.58.3 at quex.org, then clone
+the repository at git://github.com/Jurassic/quex.git or download the tar at
+https://github.com/Jurassic/quex and follow the instructions. You should then
+have quex installed somewhere in your filesystem and the environment variable
+QUEX_PATH should be pointing to that directory.
+
+
+Building and installing trtok
+-----------------------------
+
+Navigate to the cloned/downloaded-and-untarred directory where this file is
+located. I suggest making a build directory next to the src directory and
+navigating to it. Issue 
+  
+  cmake ../src
+
+to start an out-of-source (or in-source if you omitted creating the build
+directory and simply went for the src directory) build. If CMake failed to find
+any required components, you can point it in the right directory by editing
+the CMake cache. For that I recommend ccmake, where you simply run
+  
+  ccmake .
+
+from the build directory and you can setup all the parameters in a nice way.
+Besides helping CMake find the required libraries, you can use ccmake to setup
+the installation directory INSTALL_DIR, whether iconv or ICU is used for
+character decoding and encoding (USE_ICONV, USE_ICU), the path to Quex (QUEX),
+the build type (CMAKE_BUILD_TYPE=Debug, Release...) and tune several program
+parameters (the most interesting being WORK_UNIT_COUNT, which sets the number
+of threads running in the pipeline at the same time, which should be set to a
+number correlating with the number of CPUs in you machine, and CHUNK_SIZE,
+which sets the size of work units being passed through the pipeline and lets
+you optimize the overhead costs by setting it larger).
+
+After setting the parameters, press 'c' and then 'g' to configure the cache and
+generate the Makefiles (or other files for your build system of choice).
+
+Now you can use make or whatever build system you use to compile and install
+the application. For example with make you could type
+
+  make -j 4 # run 4 jobs simultaneously
+  make install
+
+After installing, you need to set the environment variable TRTOK_PATH to your
+installation directory, so trtok always knows where to look for your
+tokenization schemes, where to build and train them and where the code for the
+dynamically compiled rough tokenizer is stored.
