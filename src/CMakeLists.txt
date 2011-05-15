@@ -125,8 +125,14 @@ configure_file (${CMAKE_CURRENT_SOURCE_DIR}/python/analyze.py
                 ${CMAKE_CURRENT_BINARY_DIR}/analyze COPYONLY)
 
 
+if (NOT IS_DIRECTORY $ENV{QUEX_PATH})
+  message (FATAL_ERROR
+    "The environment variable QUEX_PATH doesn't point to a valid directory.")
+endif (NOT IS_DIRECTORY $ENV{QUEX_PATH})
+
 find_program (QUEX quex quex.bat quex-exe.py REQUIRED HINTS ENV QUEX_PATH
               DOC "Path to Quex's executable.")
+
 if (USE_ICONV)
   set (QUEX_CONVERTER "--iconv")
 elseif (USE_ICU)

@@ -125,6 +125,7 @@ his own features and specify which features are significant for what tokens.
  
 
 2) Running the tokenizer
+------------------------
 
   a) Different ways of selecting input
 

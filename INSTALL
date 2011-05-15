@@ -6,7 +6,7 @@ You will need
   or the Qt version is also recommended for easier configuration. A build
   system for which a CMake generator exists (e.g. make) and the compiler tools
   for C++ are of course a necessity as well (tested on gcc 4.5.3).
-  Debian packages: g++, make, cmake, ccmake
+  Debian packages: g++, make, cmake, cmake-curses-gui
 
 * Python
   Needed to run the analyze script. The script was aimed at Python 3.2, but
@@ -34,12 +34,10 @@ You will need
   rt.
   Debian packages: libgfortran3 (installed as a dependency of gfortran)
 
-* Quex (version > 0.58.3)
-  The lexical analyzer generator used during both compile time and runtime. Any
-  version past 0.58.3 should be fine. However, the current 0.58.3 has a little
-  fatal bug, which wouldn't let you compile trtok on some machines, so I
-  recommend to use the fixed version at github.com/Jurassic/quex until a newer
-  version is released. The official releases can be found at http://quex.org.
+* Quex (version >= 0.59.1)
+  The lexical analyzer generator used during both compile time and runtime.
+  Version 0.59.1 or later is needed. See the official releases at
+  http://quex.org.
 
 * libtool dynamic loading library (with headers)
   A platform-independent wrapper for loading shared modules during runtime.
@@ -81,8 +79,8 @@ Installing dependecies
 
 On Debian, simply issue
 
-  aptitude install g++ make cmake ccmake python3 gfortran zlib1g-dev \
-                   libltdl-dev libpcre3-dev libpcrecpp0 libboost-all-dev \
+  aptitude install g++ make cmake cmake-curses-gui python3 gfortran zlib1g-dev\
+                   libltdl-dev libpcre3-dev libpcrecpp0 libboost-all-dev\
                    libtbb-dev
 
 as root. When using a distribution older than Debian Wheezy, you might need to
@@ -94,11 +92,9 @@ https://github.com/Jurassic/maxent and follow the installation directions. You
 should end up with the compiled library in one of your lib directories and the
 headers somewhere in your include directories.
 
-For Quex, if there is still no new version since 0.58.3 at quex.org, then clone
-the repository at git://github.com/Jurassic/quex.git or download the tar at
-https://github.com/Jurassic/quex and follow the instructions. You should then
-have quex installed somewhere in your filesystem and the environment variable
-QUEX_PATH should be pointing to that directory.
+For Quex, download the latest version from http://quex.org (or at least version
+0.59.1) and unpack it to any location. After you set the QUEX_PATH environment
+variable to that directory, you are set.
 
 
 Building and installing trtok
