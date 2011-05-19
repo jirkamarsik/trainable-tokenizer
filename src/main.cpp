@@ -45,7 +45,7 @@ namespace fs = boost::filesystem;
 
 // A 2D-array accessor for the feature selection mask
 #define FEATURES_MASK(offset, property)\
-  features_mask[(offset) * n_properties + property]
+  features_mask[(offset) * n_properties + (property)]
 
 
 /* A comparison function used later.
@@ -71,6 +71,8 @@ void include_listed_files(fs::path const &file_list_path,
     string line;
     while (getline(file_list_stream, line)) {
       if (line.size() > 0)
+        // the listed files are relative to the directory of the file list
+        // if not already absolute
         input_files.push_back(fs::absolute(line, file_list_dir).native());
     }
     file_list_stream.close();

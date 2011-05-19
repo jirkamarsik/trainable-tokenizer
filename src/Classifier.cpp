@@ -21,7 +21,7 @@ using namespace std;
 }
 
 #define FEATURES_MASK(offset, property)\
-  m_features_mask[offset * (n_defined_properties + 2) + property]
+  m_features_mask[(offset) * (n_predicate_properties + 2) + (property)]
 
 namespace trtok {
 
@@ -38,9 +38,9 @@ void Classifier::process_center_token(chunk_t *out_chunk_p) {
    || (center_token.decision_flags & MAY_JOIN_FLAG)
    || (center_token.decision_flags & MAY_BREAK_SENTENCE_FLAG)) {
 
-    int n_defined_properties = center_token.property_flags.size();
-    int length_property = n_defined_properties;
-    int word_property = n_defined_properties + 1;
+    int n_predicate_properties = center_token.property_flags.size();
+    int length_property = n_predicate_properties;
+    int word_property = n_predicate_properties + 1;
 
     vector< pair<string,float> > context;
     
@@ -82,7 +82,7 @@ void Classifier::process_center_token(chunk_t *out_chunk_p) {
       }
 
       // user-defined features
-      for (int property = 0; property != n_defined_properties; property++) {
+      for (int property = 0; property != n_predicate_properties; property++) {
         if (FEATURES_MASK(offset + m_precontext, property)) {
           if (questioned_token.property_flags[property]) {
             context.push_back(make_pair(
@@ -135,7 +135,7 @@ void Classifier::process_center_token(chunk_t *out_chunk_p) {
         string single_feature_string = offset_str + ":"
                                           + property_name + "=";
 
-        if (property < n_defined_properties) {
+        if (property < n_predicate_properties) {
           single_feature_string +=
               questioned_token.property_flags[property] ? "1.0" : "0.0";
         } else if (property == length_property) {
