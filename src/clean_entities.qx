@@ -40,7 +40,8 @@ init {
 
 mode PREPROCESS {
 
-  \P{White_Space}+
+  // Need an upper limit so the lexeme doesn't outgrow the buffer
+  \P{White_Space}{1,32}
         {
           if (self.accumulator_size + LexemeL > ACCUMULATOR_CAPACITY) {
             flush_accumulator_noxml();
@@ -49,7 +50,8 @@ mode PREPROCESS {
           self.accumulator_size += LexemeL;
         }
 
-  [:inverse(\P{White_Space},[&]):]+
+  // Need an upper limit so the lexeme doesn't outgrow the buffer
+  [:inverse(\P{White_Space},[&]):]{1,32}
         {
           if (self.accumulator_size + LexemeL > ACCUMULATOR_CAPACITY)
             flush_accumulator_noxml();
