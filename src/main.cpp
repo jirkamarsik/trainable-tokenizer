@@ -67,10 +67,11 @@ bool path_compare(fs::path const &a, fs::path const &b) {
 void include_listed_files(fs::path const &file_list_path,
                           vector<string> &input_files) {
     fs::ifstream file_list_stream(file_list_path);
+    fs::path file_list_dir = file_list_path.parent_path();
     string line;
     while (getline(file_list_stream, line)) {
       if (line.size() > 0)
-        input_files.push_back(line);
+        input_files.push_back(fs::absolute(line, file_list_dir).native());
     }
     file_list_stream.close();
 }
