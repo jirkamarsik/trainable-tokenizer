@@ -21,8 +21,8 @@ void* FeatureExtractor::operator()(void *input_p) {
 
       typedef multimap<string, int>::const_iterator iter;
       typedef pair<iter, iter> iter_pair;
-      iter_pair enum_props = m_word_to_enum_props.equal_range(token->text);
-      for (iter i = enum_props.first; i != enum_props.second; i++) {
+      iter_pair list_props = m_word_to_list_props.equal_range(token->text);
+      for (iter i = list_props.first; i != list_props.second; i++) {
         token->property_flags[i->second] = true;
       }
     }

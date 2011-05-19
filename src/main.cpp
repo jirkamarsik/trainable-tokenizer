@@ -279,7 +279,7 @@ int main(int argc, char const **argv) {
      * If case folding is implented in the future, it might be feasible to
      * make the extensions completely case-insensitive. */
     vector<fs::path> split_files, join_files, begin_files, end_files,
-                     enump_files, rep_files;
+                     listp_files, rep_files;
     fs::path features_file, maxentparams_file;
     fs::path default_file_list, default_fnre_file;
     boost::unordered_map< string, vector<fs::path>* > file_vectors;
@@ -287,7 +287,7 @@ int main(int argc, char const **argv) {
     file_vectors[".join"] = &join_files;
     file_vectors[".begin"] = &begin_files;
     file_vectors[".end"] = &end_files;
-    file_vectors[".enump"] = &enump_files;
+    file_vectors[".listp"] = &listp_files;
     file_vectors[".rep"] = &rep_files;
 
     /* When we encounter two paths with the same filename, we take the former.
@@ -364,8 +364,8 @@ int main(int argc, char const **argv) {
     vector<string> prop_id_to_name;
 
     // The properties are comprised of the basic user-defined properties,
-    // which are defined in .rep files using regular expressions or in .enump
-    // files using enumerations of rough tokens, and of builtin properties
+    // which are defined in .rep files using regular expressions or in .listp
+    // files using lists of rough tokens, and of builtin properties
     // %Word and %length.
     int n_properties = 0;
     int n_basic_properties = 0;
@@ -401,7 +401,7 @@ int main(int argc, char const **argv) {
       // and register.
       if (prop_name_to_id.count(file->stem().string()) > 0) {
         END_WITH_ERROR(*file, "Property " << file->stem() << " defined twice "
-            "(both as a regex property and an enumerated property).");
+            "(both as a regex property and a list property).");
       }
       prop_name_to_id[file->stem().string()] = n_properties;
       prop_id_to_name.push_back(file->stem().string());
@@ -409,25 +409,25 @@ int main(int argc, char const **argv) {
       n_basic_properties++;
     }
 
-    // The words beloning to enumerated properties are inserted into
-    // a BST along with the ids of enumeation properties they belong to.
-    multimap<string, int> word_to_enum_props;
-    for (vector<fs::path>::const_iterator file = enump_files.begin();
-         file != enump_files.end(); file++) {
+    // The words belonging to list properties are inserted into
+    // a BST along with the ids of the list properties they belong to.
+    multimap<string, int> word_to_list_props;
+    for (vector<fs::path>::const_iterator file = listp_files.begin();
+         file != listp_files.end(); file++) {
       // Read and store words...
-      fs::ifstream enum_file(*file);
+      fs::ifstream list_file(*file);
       string line;
-      while (getline(enum_file, line)) {
+      while (getline(list_file, line)) {
         if (line.length() == 0)
           continue;
-        word_to_enum_props.insert(make_pair(line, n_properties));
+        word_to_list_props.insert(make_pair(line, n_properties));
       }
-      enum_file.close();
+      list_file.close();
 
       // and register the property.
       if (prop_name_to_id.count(file->stem().string()) > 0) {
         END_WITH_ERROR(*file, "Property " << file->stem() << " defined twice "
-            "(both as a regex property and an enumerated property).");
+            "(both as a regex property and an listerated property).");
       }
       prop_name_to_id[file->stem().string()] = n_properties;
       prop_id_to_name.push_back(file->stem().string());
@@ -437,7 +437,7 @@ int main(int argc, char const **argv) {
 
     // Finally we add the two "builtin" properties.
     if (prop_name_to_id.count("%length") > 0) {
-      END_WITH_ERROR("*/%length.[rep|enump]",
+      END_WITH_ERROR("*/%length.[rep|listp]",
           "'%length' is a reserved property name.");
     }
     prop_name_to_id["%length"] = n_properties;
@@ -445,7 +445,7 @@ int main(int argc, char const **argv) {
     n_properties++;
 
     if (prop_name_to_id.count("%Word") > 0) {
-      END_WITH_ERROR("*/%Word.[rep|enump]",
+      END_WITH_ERROR("*/%Word.[rep|listp]",
           "'%Word' is a reserved property name.");
     }
     prop_name_to_id["%Word"] = n_properties;
@@ -704,7 +704,7 @@ int main(int argc, char const **argv) {
 
       feature_extractor_p = new FeatureExtractor(n_basic_properties,
                                                  regex_properties,
-                                                 word_to_enum_props);
+                                                 word_to_list_props);
       pipeline.add_filter(*feature_extractor_p);
 
       classifier_p = new Classifier(mode, prop_id_to_name, precontext,
@@ -743,7 +743,7 @@ int main(int argc, char const **argv) {
       } else {
         feature_extractor_p = new FeatureExtractor(n_basic_properties,
                                                    regex_properties,
-                                                   word_to_enum_props);
+                                                   word_to_list_props);
         pipeline.add_filter(*feature_extractor_p);
 
         classifier_p = new Classifier(mode, prop_id_to_name, precontext,

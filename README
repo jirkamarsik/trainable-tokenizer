@@ -62,9 +62,9 @@ his own features and specify which features are significant for what tokens.
     marked as having this property if it can be matched to the regular
     expression.
 
-    If a rough token's text is exactly the same as a line from a .enump file,
+    If a rough token's text is exactly the same as a line from a .listp file,
     then that rough token is marked as having the property defined by that
-    .enump file.
+    .listp file.
 
   c) Feature selection
 
