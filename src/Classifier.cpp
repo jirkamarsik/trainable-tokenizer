@@ -71,13 +71,13 @@ void Classifier::process_center_token(chunk_t *out_chunk_p) {
       }
 
       // whitespace features
-      if (center_token.n_newlines >= 0) {
+      if (questioned_token.n_newlines >= 0) {
         context.push_back(make_pair(offset_str + "%WHITESPACE", 1.0));
       }
-      if (center_token.n_newlines >= 1) {
+      if (questioned_token.n_newlines >= 1) {
         context.push_back(make_pair(offset_str + "%LINE_BREAK", 1.0));
       }
-      if (center_token.n_newlines >= 2) {
+      if (questioned_token.n_newlines >= 2) {
         context.push_back(make_pair(offset_str + "%PARAGRAPH_BREAK", 1.0));
       }
 
