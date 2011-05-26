@@ -34,10 +34,6 @@ public:
           MAY_JOIN_ID;
       type_id_table[QUEX_ROUGH_WHITESPACE - TOKEN_ID_OFFSET] =
           WHITESPACE_ID;
-      type_id_table[QUEX_ROUGH_LINE_BREAK - TOKEN_ID_OFFSET] =
-          LINE_BREAK_ID;
-      type_id_table[QUEX_ROUGH_PARAGRAPH_BREAK - TOKEN_ID_OFFSET] =
-          PARAGRAPH_BREAK_ID;
     }
 
     virtual void setup(std::istream *in_p, char const *encoding) {
@@ -79,13 +75,16 @@ public:
         if (out_token.type_id == TOKEN_PIECE_ID) {
             out_token.text = m_token_p->pretty_char_text();
         }
+        else if (out_token.type_id == WHITESPACE_ID) {
+            out_token.n_newlines = m_token_p->number;
+        }
 
         return out_token;
     }
 
 private:
     // Static configuration
-    rough_token_id type_id_table[7];
+    rough_token_id type_id_table[5];
 
     // Configuration
     quex::RoughLexer *m_lexer_p;

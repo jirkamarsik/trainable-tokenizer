@@ -16,8 +16,6 @@ enum rough_token_id {
     MAY_SPLIT_ID,
     MAY_JOIN_ID,
     WHITESPACE_ID,
-    LINE_BREAK_ID,
-    PARAGRAPH_BREAK_ID
 };
 
 /* My stripped down version of a rough token as reported by Quex. I use my
@@ -27,6 +25,7 @@ enum rough_token_id {
 struct rough_token_t {
     rough_token_id type_id;
     std::string text;
+    int n_newlines;
 };
 
 /* An interface to the wrapper of the generated lexer. This definition lets

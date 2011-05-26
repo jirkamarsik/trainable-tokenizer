@@ -62,16 +62,7 @@ void* RoughTokenizer::operator()(void*) {
                 (cur_token.decision_flags | MAY_BREAK_SENTENCE_FLAG);
           break;
         case WHITESPACE_ID:
-          assert(cur_token.n_newlines == -1);
-          cur_token.n_newlines = 0;
-          break;
-        case LINE_BREAK_ID:
-          assert(cur_token.n_newlines == -1);
-          cur_token.n_newlines = 1;
-          break;
-        case PARAGRAPH_BREAK_ID:
-          assert(cur_token.n_newlines == -1);
-          cur_token.n_newlines = 2;
+          cur_token.n_newlines = m_last_rough_tok.n_newlines;
           break;
       }
 
