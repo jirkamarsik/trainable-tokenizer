@@ -215,7 +215,8 @@ void Classifier::process_center_token(chunk_t *out_chunk_p) {
 
     if (m_qa_stream_p != NULL) {
 
-      *m_qa_stream_p << m_processed_filename << '|';
+      *m_qa_stream_p << m_processed_filename << ':'
+                     << m_center_token_line << '|';
 
       if (m_mode == PREPARE_MODE) {
         *m_qa_stream_p << '|' << '|';
@@ -252,6 +253,7 @@ void Classifier::process_tokens(vector<token_t> &tokens,
     m_center_token = WINDOW_OFFSET(1);
     m_window[WINDOW_OFFSET(m_postcontext)] = *token;
     process_center_token(out_chunk_p);
+    m_center_token_line += m_window[m_center_token].n_newlines;
   }
 }
 
@@ -262,8 +264,10 @@ bool Classifier::consume_whitespace() {
   bool line_break = false;
   do
   {
-    if (m_annot_char == 0x0A)
+    if (m_annot_char == 0x0A) {
       line_break = true;
+      m_current_annot_line++;
+    }
     m_annot_char = get_unicode_from_utf8(m_annot_stream_p);
   } while (is_whitespace(m_annot_char) && (m_annot_stream_p->gcount() > 0));
   return line_break;
@@ -274,13 +278,14 @@ void Classifier::report_alignment_warning(string occurence_type,
                                           string suffix,
                                           string advice) {
 
-  cerr << "Warning: Unexpected " << occurence_type
+  cerr << m_annotated_filename << ":" << m_current_annot_line
+       << ": Warning: Unexpected " << occurence_type
        << " encountered in annotated data." << endl;
-  cerr << "         Prefix=" << prefix;
+  cerr << "    Prefix=" << prefix;
   if (suffix != "")
-    cerr << " Suffix=" << suffix;
+    cerr << "    Suffix=" << suffix;
   cerr << endl;
-  cerr << "         " << advice << endl;
+  cerr << "      " << advice << endl;
 }
 
 void Classifier::align_chunk_with_solution(chunk_t *in_chunk_p) {
@@ -299,7 +304,9 @@ void Classifier::align_chunk_with_solution(chunk_t *in_chunk_p) {
     for (size_t i = 0; i != token_text.length(); i++)
     {
       if (m_annot_stream_p->gcount() == 0)
-        throw alignment_exception("Annotated data truncated!");
+        throw alignment_exception((m_annotated_filename
+              + ":" + boost::lexical_cast<string>(m_current_annot_line)
+              + ": Annotated data truncated!").c_str());
       // An unexpected word break
       if (is_whitespace(m_annot_char))
       {
@@ -319,8 +326,9 @@ void Classifier::align_chunk_with_solution(chunk_t *in_chunk_p) {
       // Different text in the annotated data
       if (m_annot_char != token_text[i])
       {
-        // TODO: Possibly better error reporting.
-        throw alignment_exception("Annotated data mismatch!");
+        throw alignment_exception((m_annotated_filename
+                + ":" + boost::lexical_cast<string>(m_current_annot_line)
+                + ": Annotated data mismatch!").c_str());
       }
       m_annot_char = get_unicode_from_utf8(m_annot_stream_p);
     } // for (size_t i = 0; i != token_text.length(); i++)
@@ -364,6 +372,8 @@ void Classifier::align_chunk_with_solution(chunk_t *in_chunk_p) {
               "Consider adding a tokenization rule to a *.join file.");
       }
     }
+
+    m_current_input_line += token->n_newlines;
   } // for (vector<token_t>::iterator token = in_chunk_p->tokens.begin();
   
   if (is_whitespace(m_annot_char)) {

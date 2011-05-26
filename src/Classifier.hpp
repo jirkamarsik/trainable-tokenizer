@@ -68,8 +68,10 @@ public:
         reset();
     }
 
-    void setup(std::string processed_filename) {
+    void setup(std::string processed_filename,
+               std::string annotated_filename = "") {
         m_processed_filename = processed_filename;
+        m_annotated_filename = annotated_filename;
         reset();
     }
 
@@ -80,6 +82,9 @@ public:
           m_window[i].decision_flags = NO_FLAG;
         }
         m_center_token = 0;
+        m_center_token_line = 1;
+        m_current_input_line = 1;
+        m_current_annot_line = 1;
     }
 
     void load_model(std::string const &model_path) {
@@ -126,6 +131,7 @@ private:
     std::ostream *m_qa_stream_p;
     std::istream *m_annot_stream_p;
     std::string m_processed_filename;
+    std::string m_annotated_filename;
 
     // State
     uint32_t m_annot_char;
@@ -134,6 +140,13 @@ private:
     int m_center_token;
     maxent::MaxentModel m_model;
     int m_n_events_registered;
+    // The line of the input file containing the token in the center of
+    // the context window (may be slightly off due to multiline XML tags).
+    int m_center_token_line;
+    // The current line of the input file being processed when aligning data.
+    int m_current_input_line;
+    // The current line of the annotated file when aligning data.
+    int m_current_annot_line;
 };
 
 }

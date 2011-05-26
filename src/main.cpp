@@ -837,7 +837,8 @@ int main(int argc, char const **argv) {
         input_cleaner_p->setup(&input_stream);
         rough_tokenizer_p->reset();
         annot_cleaner_p->setup(&annotated_stream);
-        classifier_p->setup(input_file_path.native());
+        classifier_p->setup(input_file_path.native(),
+                            annotated_file_path.native());
 
         // run it...
         boost::thread input_thread(&TextCleaner::do_work,
