@@ -896,12 +896,12 @@ int main(int argc, char const **argv) {
         input_thread.join();
         output_thread.join();
         
+	output_stream_p->flush();
         // and close the files.
         if (*input_file != "-") {
           fs::ifstream *input_file_stream_p = (fs::ifstream*)input_stream_p;
           fs::ofstream *output_file_stream_p = (fs::ofstream*)output_stream_p;
           input_file_stream_p->close();
-          output_file_stream_p->flush();
           output_file_stream_p->close();
           delete input_file_stream_p;
           delete output_file_stream_p;
@@ -918,7 +918,10 @@ int main(int argc, char const **argv) {
     }
 
     qa_stream_p->flush();
-    qa_stream_p->close();
+    if (s_qa_file != "-") {
+      std::ofstream *qa_file_stream_p = (std::ofstream*)qa_stream_p;
+      qa_file_stream_p->close();
+    }
 
     lt_dlexit();
 }
