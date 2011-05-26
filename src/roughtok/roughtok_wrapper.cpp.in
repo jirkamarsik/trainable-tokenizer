@@ -73,10 +73,10 @@ public:
         }
 
         if (out_token.type_id == TOKEN_PIECE_ID) {
-            out_token.text = m_token_p->pretty_char_text();
+            out_token.text = quex::RoughLexer_unicode_to_char(m_token_p->get_text());
         }
         else if (out_token.type_id == WHITESPACE_ID) {
-            out_token.n_newlines = m_token_p->number;
+            out_token.n_newlines = m_token_p->n_newlines;
         }
 
         return out_token;
