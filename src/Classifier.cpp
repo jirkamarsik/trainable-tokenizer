@@ -253,7 +253,7 @@ void Classifier::process_tokens(vector<token_t> &tokens,
     m_center_token = WINDOW_OFFSET(1);
     m_window[WINDOW_OFFSET(m_postcontext)] = *token;
     process_center_token(out_chunk_p);
-    m_center_token_line += m_window[m_center_token].n_newlines;
+    m_center_token_line += max(0, m_window[m_center_token].n_newlines);
   }
 }
 
@@ -373,7 +373,7 @@ void Classifier::align_chunk_with_solution(chunk_t *in_chunk_p) {
       }
     }
 
-    m_current_input_line += token->n_newlines;
+    m_current_input_line += max(0, token->n_newlines);
   } // for (vector<token_t>::iterator token = in_chunk_p->tokens.begin();
   
   if (is_whitespace(m_annot_char)) {
