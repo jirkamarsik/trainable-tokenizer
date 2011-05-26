@@ -184,7 +184,7 @@ include_directories (${CMAKE_CURRENT_SOURCE_DIR}
                      ${CMAKE_CURRENT_BINARY_DIR}/quex_files
                      $ENV{QUEX_PATH})
 
-add_definitions ("-DQUEX_OPTION_ASSERTS_WARNING_MESSAGE_DISABLED")
+add_definitions ("-DQUEX_OPTION_ASSERTS_DISABLED")
 
 set (SRCS main.cpp TextCleaner.cpp ${QUEX_ENTITY}.cpp ${QUEX_XML}.cpp
     roughtok_compile.cpp RoughTokenizer.cpp OutputFormatter.cpp

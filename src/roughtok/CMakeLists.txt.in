@@ -5,7 +5,7 @@ project (RoughLexer)
 set (CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "$ENV{TRTOK_PATH}/code")
 set (LIBS)
 
-set (BUILD_TYPE "Debug")
+set (BUILD_TYPE "Release")
 
 find_package (LIBICONV)
 find_package (ICU)
@@ -59,7 +59,7 @@ include_directories (${CMAKE_CURRENT_SOURCE_DIR}
                      $ENV{TRTOK_PATH}/code
                      $ENV{QUEX_PATH})
 
-add_definitions ("-DQUEX_OPTION_ASSERTS_WARNING_MESSAGE_DISABLED")
+add_definitions ("-DQUEX_OPTION_ASSERTS_DISABLED")
 
 set (SRCS $ENV{TRTOK_PATH}/code/roughtok_wrapper.cpp RoughLexer.cpp)
 add_library (roughtok MODULE ${SRCS})

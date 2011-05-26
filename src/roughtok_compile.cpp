@@ -557,6 +557,24 @@ bool compile_rough_lexer(vector<fs::path> const &split_files,
         CHECK_FOR_FILE("FindLIBICONV.cmake");
         CHECK_FOR_FILE("FindICU.cmake");
 
+        // Clean out the old generated files so they are not accedintally used.
+        fs::path compiled_wrapper_path = build_path / fs::path("roughtok");
+        fs::path build_command_file_path =
+                                build_path / fs::path ("build_command");
+
+        fs::remove(compiled_wrapper_path);
+        fs::remove(file_list_path);
+        fs::remove(build_command_file_path);
+        fs::remove_all(build_path / "CMakeFiles");
+        fs::remove(build_path / "cmake_install.cmake");
+        // Clean any temp. builds but keep the cache
+
+        fs::remove(build_path / "RoughLexer.cpp");
+        fs::remove(build_path / "RoughLexer");
+        fs::remove(build_path / "RoughLexer-token");
+        fs::remove(build_path / "RoughLexer-token_ids");
+        fs::remove(build_path / "RoughLexer-configuration");
+
         // Copy the CMake list file...
         fs::path cmake_list_path = code_path / fs::path("CMakeLists.txt");
         fs::copy_file(cmake_list_path, build_path / fs::path("CMakeLists.txt"),
@@ -571,8 +589,6 @@ bool compile_rough_lexer(vector<fs::path> const &split_files,
 
         // CMake also writes for us a file on whose single line is a command
         // we need to invoke to build the project on the target system.
-        fs::path build_command_file_path =
-                                build_path / fs::path ("build_command");
         fs::ifstream build_command_file(build_command_file_path);
         string build_command;
         getline(build_command_file, build_command);
@@ -585,12 +601,7 @@ bool compile_rough_lexer(vector<fs::path> const &split_files,
         }
 
         // UPDATING roughtok.files
-        fs::path compiled_wrapper_path = build_path / fs::path("roughtok");
-
-        if (fs::exists(compiled_wrapper_path)
-          && ((!fs::exists(file_list_path)
-            || (fs::last_write_time(compiled_wrapper_path) >
-                fs::last_write_time(file_list_path))))) {
+        if (fs::exists(compiled_wrapper_path)) {
 
             // Finally we write the list of files that defined this lexer
             // and "stamp" them with the current time. (but only if we
