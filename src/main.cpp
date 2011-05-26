@@ -917,5 +917,8 @@ int main(int argc, char const **argv) {
                                 save_model_as_binary);
     }
 
+    qa_stream_p->flush();
+    qa_stream_p->close();
+
     lt_dlexit();
 }
