@@ -134,19 +134,19 @@ int main(int argc, char const **argv) {
       ("preserve-segments,s", po::bool_switch(&o_preserve_segments),
         "Assumes sentence boundaries are already specified by newlines.")
       ("remove-xml,x", po::bool_switch(&o_remove_xml),
-        "Removes XML markup from the input for the duration of the"
-        "tokenization. If -X (--remove-xml-perm) is not set, the XML is"
+        "Removes XML markup from the input for the duration of the "
+        "tokenization. If -X (--remove-xml-perm) is not set, the XML is "
         "reinserted into the output.")
       ("remove-xml-perm,X", po::bool_switch(&o_remove_xml_perm),
-        "Removes XML markup from the input without reinserting into the output"
-        "after tokenization.")
+        "Removes XML markup from the input without reinserting it into the "
+        "output after tokenization.")
       ("expand-entities,e", po::bool_switch(&o_expand_entities),
-        "Expands HTML entities and character references found in the input for"
-        "the duration of the tokenization. If -E (--expand-entities-perm) is"
-        "not set, the characters produced by entity expansion will be replaced"
+        "Expands HTML entities and character references found in the input for "
+        "the duration of the tokenization. If -E (--expand-entities-perm) is "
+        "not set, the characters produced by entity expansion will be replaced "
         "by the original entities in the output.")
       ("expand-entities-perm,E", po::bool_switch(&o_expand_entities_perm),
-        "Expands entities found in the input and keeps the characters produced"
+        "Expands entities found in the input and keeps the characters produced "
         "by the expansion in the output in their literal form.")
       ("questions,q", po::value<string>(&s_qa_file)->default_value("-"),
         "Prints the questions presented to the maximum entropy classifier to "
@@ -236,7 +236,7 @@ int main(int argc, char const **argv) {
     fs::path scheme_rel_path = fs::path(s_scheme);
     fs::path scheme_path = schemes_root / scheme_rel_path;
     if (!fs::is_directory(scheme_path)) {
-        END_WITH_ERROR("trtok", "Scheme directory " << s_scheme << " not "
+        END_WITH_ERROR("trtok", "Scheme directory \"" << s_scheme << "\" not "
             "found in the schemes directory.");
     }
 
@@ -416,8 +416,8 @@ int main(int argc, char const **argv) {
 
       // and register.
       if (prop_name_to_id.count(file->stem().string()) > 0) {
-        END_WITH_ERROR(*file, "Property " << file->stem() << " defined twice "
-            "(both as a regex property and a list property).");
+        END_WITH_ERROR(*file, "Property \"" << file->stem() << "\" defined "
+            "twice (both as a regex property and a list property).");
       }
       prop_name_to_id[file->stem().string()] = n_properties;
       prop_id_to_name.push_back(file->stem().string());
@@ -442,8 +442,8 @@ int main(int argc, char const **argv) {
 
       // and register the property.
       if (prop_name_to_id.count(file->stem().string()) > 0) {
-        END_WITH_ERROR(*file, "Property " << file->stem() << " defined twice "
-            "(both as a regex property and an listerated property).");
+        END_WITH_ERROR(*file, "Property \"" << file->stem() << "\" defined "
+            "twice (both as a regex property and a list property).");
       }
       prop_name_to_id[file->stem().string()] = n_properties;
       prop_id_to_name.push_back(file->stem().string());

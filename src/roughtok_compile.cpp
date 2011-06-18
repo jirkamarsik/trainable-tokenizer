@@ -78,7 +78,7 @@ void read_contexts(vector<fs::path> const &files,
         line.copy(line_data, line.length());
         line_data[line.length()] = '\0';
         char *prefix = strtok(line_data, " \t");
-        char *suffix = strtok(NULL, "\t");
+        char *suffix = strtok(NULL, " \t");
         if (prefix == NULL) {
             // An empty line.
             ;
@@ -90,7 +90,7 @@ void read_contexts(vector<fs::path> const &files,
                  + ": Error: Missing regular expression describing suffix.";
             throw config_exception(error_msg.c_str());
         }
-        else if (strtok(NULL, "\t") != NULL) {
+        else if (strtok(NULL, " \t") != NULL) {
             // More than 1 regex.
             string error_msg;
             error_msg = file->string() + ":"

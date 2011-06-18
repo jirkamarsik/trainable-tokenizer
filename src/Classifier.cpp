@@ -380,7 +380,7 @@ void Classifier::align_chunk_with_solution(chunk_t *in_chunk_p) {
     consume_whitespace();
   }
   if (in_chunk_p->is_final && !m_annot_stream_p->eof()) {
-    cerr << m_annotated_filename
+    cerr << m_annotated_filename << ": "
          << "Warning: Extra text at the end of annotated data." << endl;
   }
 }
