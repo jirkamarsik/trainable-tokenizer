@@ -933,10 +933,12 @@ int main(int argc, char const **argv) {
                                 save_model_as_binary);
     }
 
-    qa_stream_p->flush();
-    if (s_qa_file != "-") {
-      std::ofstream *qa_file_stream_p = (std::ofstream*)qa_stream_p;
-      qa_file_stream_p->close();
+    if (qa_stream_p != NULL) {
+      qa_stream_p->flush();
+      if (s_qa_file != "-") {
+        std::ofstream *qa_file_stream_p = (std::ofstream*)qa_stream_p;
+        qa_file_stream_p->close();
+      }
     }
 
     lt_dlexit();
