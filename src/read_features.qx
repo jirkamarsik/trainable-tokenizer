@@ -20,7 +20,7 @@ mode FEATURES: <skip: [ \t\r\n]> {
   "("                   => QUEX_FEATURES_LPAREN;
   ")"                   => QUEX_FEATURES_RPAREN;
   "^"                   => QUEX_FEATURES_COMBINE;
-  %?[a-zA-Z0-9_]+       => QUEX_FEATURES_IDENTIFIER(Lexeme);
+  %?[a-zA-Z0-9_\-]+     => QUEX_FEATURES_IDENTIFIER(Lexeme);
   "*"                   => QUEX_FEATURES_STAR;
   <<EOF>>               => QUEX_FEATURES_TERMINATION;
 }
