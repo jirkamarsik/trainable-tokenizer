@@ -18,7 +18,7 @@ typedef boost::uint32_t uint32_t;
 #define TEXTCLEANER(cleaner_namespace, cleaner_class, token_prefix) {\
     cleaner_namespace::cleaner_class lex(m_input_stream_p,\
                                          m_input_encoding.c_str());\
-    lex.expand_entities = m_expand_entities;\
+    lex.report_entities = m_expand_entities;\
     cleaner_namespace::Token *token_p = 0x0;\
     long position = 0;\
 \
@@ -48,10 +48,11 @@ typedef boost::uint32_t uint32_t;
         std::string entity = unicode_to_utf8(token_p->get_text());\
         uint32_t expanded_cp;\
         bool good_expand = expand_entity(entity, expanded_cp);\
-        std::string expanded_utf8 = unicode_to_utf8(std::basic_string<uint32_t>(1, expanded_cp));\
+        std::string expanded_utf8 =\
+            unicode_to_utf8(std::basic_string<uint32_t>(1, expanded_cp));\
         if (good_expand) {\
           if ((m_cutout_queue_p != NULL) && !is_whitespace(expanded_cp)\
-                      && !m_keep_entities_expanded) {\
+                      && !m_expand_entities_perm) {\
             /* We only report the entity for replacement if
              * it doesn't represent a whitespace, because we eat
              * all the whitespace a substitute our own. */\
@@ -69,9 +70,10 @@ typedef boost::uint32_t uint32_t;
         }\
         position += is_whitespace(expanded_cp) ? 0 : 1;\
       } else if (token_p->type_id() == token_prefix##XML) {\
-        /* We found some XML which we stash away and give it to the output
-         * formatter so it can reinsert it later. */\
-        if (m_cutout_queue_p != NULL) {\
+        /* We found some XML which, depending on m_remove_xml_perm and whether
+         * we were given a cutout queue, we stash away and give to the output
+         * formatter so it can reinsert it later or simply throw it away. */\
+        if ((m_cutout_queue_p != NULL) && (!m_remove_xml_perm)) {\
           cutout_t cutout;\
           cutout.type = XML_CUTOUT;\
           cutout.position = position;\
@@ -124,7 +126,7 @@ bool TextCleaner::expand_entity(std::string const &entity,
 
 void TextCleaner::do_work()
 {
-  if (!m_hide_xml) {
+  if (!m_remove_xml) {
     TEXTCLEANER(clean_entities, EntityCleaner, QUEX_PREPROC_NOXML_);
   } else {
     TEXTCLEANER(clean_xml, XmlCleaner, QUEX_PREPROC_WITHXML_);

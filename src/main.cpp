@@ -96,7 +96,8 @@ int main(int argc, char const **argv) {
     string s_filename_regexp;
 
     bool o_preserve_paragraphs, o_detokenize, o_preserve_segments;
-    bool o_hide_xml, o_expand_entities, o_keep_entities_expanded;
+    bool o_remove_xml, o_remove_xml_perm;
+    bool o_expand_entities, o_expand_entities_perm;
     bool o_verbose;
 
     /* We use the Boost Program Options library to handle option parsing.
@@ -132,15 +133,21 @@ int main(int argc, char const **argv) {
         "spaces or newlines in case of sentence break.")
       ("preserve-segments,s", po::bool_switch(&o_preserve_segments),
         "Assumes sentence boundaries are already specified by newlines.")
-      ("hide-xml,x", po::bool_switch(&o_hide_xml),
-        "Hides XML markup from the tokenizer and then reintroduces it to the "
-        "output.")
+      ("remove-xml,x", po::bool_switch(&o_remove_xml),
+        "Removes XML markup from the input for the duration of the"
+        "tokenization. If -X (--remove-xml-perm) is not set, the XML is"
+        "reinserted into the output.")
+      ("remove-xml-perm,X", po::bool_switch(&o_remove_xml_perm),
+        "Removes XML markup from the input without reinserting into the output"
+        "after tokenization.")
       ("expand-entities,e", po::bool_switch(&o_expand_entities),
-        "Treats entities as the characters they represent. The output will "
-        "preserve these characters as entities.")
-      ("keep-entities-expanded,k", po::bool_switch(&o_keep_entities_expanded),
-        "Override the behavior of -e so expanded entities are kept expanded "
-        "in the output instead of being replaced with the original entities.")
+        "Expands HTML entities and character references found in the input for"
+        "the duration of the tokenization. If -E (--expand-entities-perm) is"
+        "not set, the characters produced by entity expansion will be replaced"
+        "by the original entities in the output.")
+      ("expand-entities-perm,E", po::bool_switch(&o_expand_entities_perm),
+        "Expands entities found in the input and keeps the characters produced"
+        "by the expansion in the output in their literal form.")
       ("questions,q", po::value<string>(&s_qa_file)->default_value("-"),
         "Prints the questions presented to the maximum entropy classifier to "
         "the specified file. In TOKENIZE mode, the classifier's answer is "
@@ -177,6 +184,12 @@ int main(int argc, char const **argv) {
     try {
         po::store(cmd_line.run(), vm);
         po::notify(vm);
+
+        // -X implies -x and -E implies -e
+        if (o_remove_xml_perm)
+          o_remove_xml = true;
+        if (o_expand_entities_perm)
+          o_expand_entities = true;
     } catch (po::error const &exc) {
         cerr << "trtok:command line options: Error: " << exc.what() << endl;
         cerr << "Usage: trtok <prepare|train|tokenize|evaluate> "
@@ -690,8 +703,9 @@ int main(int argc, char const **argv) {
       input_pipe_from_p = new pipes::ipipestream(*input_pipe_p);
 
       input_cleaner_p = new TextCleaner(input_pipe_to_p, s_encoding,
-                                        o_hide_xml, o_expand_entities,
-                                        o_keep_entities_expanded);
+                                        o_remove_xml, o_remove_xml_perm,
+                                        o_expand_entities,
+                                        o_expand_entities_perm);
 
       rough_tokenizer_p = new RoughTokenizer(rough_lexer_wrapper);
       rough_tokenizer_p->setup(input_pipe_from_p, "UTF-8");
@@ -702,8 +716,9 @@ int main(int argc, char const **argv) {
       annot_pipe_from_p = new pipes::ipipestream(*annot_pipe_p);
 
       annot_cleaner_p = new TextCleaner(annot_pipe_to_p, s_encoding,
-                                        o_hide_xml, o_expand_entities,
-                                        o_keep_entities_expanded);
+                                        o_remove_xml, o_remove_xml_perm,
+                                        o_expand_entities,
+                                        o_expand_entities_perm);
 
       feature_extractor_p = new FeatureExtractor(n_basic_properties,
                                                  regex_properties,
@@ -728,8 +743,9 @@ int main(int argc, char const **argv) {
       input_pipe_from_p = new pipes::ipipestream(*input_pipe_p);
 
       input_cleaner_p = new TextCleaner(input_pipe_to_p, s_encoding,
-                                        o_hide_xml, o_expand_entities,
-                                        o_keep_entities_expanded,
+                                        o_remove_xml, o_remove_xml_perm,
+                                        o_expand_entities,
+                                        o_expand_entities_perm,
                                         cutout_queue_p);
 
       rough_tokenizer_p = new RoughTokenizer(rough_lexer_wrapper);

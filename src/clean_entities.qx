@@ -29,13 +29,13 @@ body {
     so we know when to flush it. nonblanks_read tells us how many of the
     characters in the accumulator are nonblank. */
   int accumulator_size, nonblanks_read;
-  bool expand_entities;
+  bool report_entities;
 }
 
 init {
     self.accumulator_size = 0;
     self.nonblanks_read = 0;
-    self.expand_entities = true;
+    self.report_entities = true;
 }
 
 mode PREPROCESS {
@@ -72,7 +72,7 @@ mode PREPROCESS {
 
   {ENTITY}|{CHARREF}
         {
-          if (self.expand_entities) {
+          if (self.report_entities) {
               if (self.accumulator_size > 0) {
                 flush_accumulator_noxml();
               }
