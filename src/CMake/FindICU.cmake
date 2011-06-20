@@ -64,8 +64,8 @@ else (ICU_CONFIG)
     include (LibFindMacros)
     
     # Try to use pkg-config's data to help find the include dir and lib file
-    libfind_pkg_search_modules (ICU_PKGCONF icu icuuc cygicuuc cygicuuc32
-                                QUIET)
+    libfind_pkg_check_modules (ICU_PKGCONF icu icuuc cygicuuc cygicuuc32
+                               QUIET)
 
     # Pass on any other options like macro definitions found by pkg-config
     set (ICU_DEFINITIONS ICU_PKGCONF_CFLAGS_OTHER)

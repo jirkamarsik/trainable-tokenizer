@@ -143,24 +143,24 @@ set (QUEX_ENTITY quex_files/trtok_clean_entities_EntityCleaner)
 add_custom_command (OUTPUT ${QUEX_ENTITY} ${QUEX_ENTITY}.cpp
                            ${QUEX_ENTITY}-token ${QUEX_ENTITY}-configuration
                            ${QUEX_ENTITY}-token_ids
-    COMMAND quex --mode-files    ${CMAKE_CURRENT_SOURCE_DIR}/clean_entities.qx
-                 --engine                 trtok::clean_entities::EntityCleaner
-                 --buffer-element-size                                       4
-                 --token-prefix                            QUEX_PREPROC_NOXML_
-                 --odir                 ${CMAKE_CURRENT_BINARY_DIR}/quex_files
-                 ${QUEX_CONVERTER}
+    COMMAND ${QUEX} --mode-files   ${CMAKE_CURRENT_SOURCE_DIR}/clean_entities.qx
+                    --engine                trtok::clean_entities::EntityCleaner
+                    --buffer-element-size                                      4
+                    --token-prefix                           QUEX_PREPROC_NOXML_
+                    --odir                ${CMAKE_CURRENT_BINARY_DIR}/quex_files
+                    ${QUEX_CONVERTER}
     DEPENDS clean_entities.qx VERBATIM
     COMMENT "Building EntityCleaner with quex")
 
 set (QUEX_XML quex_files/trtok_clean_xml_XmlCleaner)
 add_custom_command (OUTPUT ${QUEX_XML} ${QUEX_XML}.cpp ${QUEX_XML}-token
                            ${QUEX_XML}-configuration ${QUEX_XML}-token_ids
-    COMMAND quex --mode-files         ${CMAKE_CURRENT_SOURCE_DIR}/clean_xml.qx
-                 --engine                         trtok::clean_xml::XmlCleaner
-                 --buffer-element-size                                       4
-                 --token-prefix                          QUEX_PREPROC_WITHXML_
-                 --odir                 ${CMAKE_CURRENT_BINARY_DIR}/quex_files
-                 ${QUEX_CONVERTER}
+    COMMAND ${QUEX} --mode-files         ${CMAKE_CURRENT_SOURCE_DIR}/clean_xml.qx
+                    --engine                         trtok::clean_xml::XmlCleaner
+                    --buffer-element-size                                       4
+                    --token-prefix                          QUEX_PREPROC_WITHXML_
+                    --odir                 ${CMAKE_CURRENT_BINARY_DIR}/quex_files
+                    ${QUEX_CONVERTER}
     DEPENDS clean_xml.qx VERBATIM
     COMMENT "Building XmlCleaner with quex")
 

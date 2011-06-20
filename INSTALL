@@ -14,7 +14,7 @@ You will need
   Debian packages: python3 or python
 
 * Maxent Modeling Toolkit for Python and C++ (Le Zhang)
-  I recommend the version at github.com/Jurassic/maxent which fixes some
+  I recommend the version at github.com/jirkamarsik/maxent which fixes some
   critical overflow bugs. I also recommend that you have a Fortran compiler
   installed so that the L-BFGS procedure is also compiled. The zlib libraries
   and headers will also allow you to save the trained model in a compressed
@@ -86,11 +86,11 @@ On Debian, simply issue
 as root. When using a distribution older than Debian Wheezy, you might need to
 install Boost 1.46 from upstream due to changes in the FileSystem API.
 
-For maxent, git clone the repository at git://github.com/Jurassic/maxent.git or
-download the tarred source from the web interface at
-https://github.com/Jurassic/maxent and follow the installation directions. You
-should end up with the compiled library in one of your lib directories and the
-headers somewhere in your include directories.
+For maxent, git clone the repository at git://github.com/jirkamarsik/maxent.git
+or download the tarred source from the web interface at
+https://github.com/jirkamarsik/maxent and follow the installation directions.
+You should end up with the compiled library in one of your lib directories and
+the headers somewhere in your include directories.
 
 For Quex, download the latest version from http://quex.org (or at least version
 0.59.1) and unpack it to any location. After you set the QUEX_PATH environment
