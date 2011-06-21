@@ -35,8 +35,14 @@ endif (USE_ICONV)
 build_command (BUILD_COMMAND_VAR)
 file (WRITE build_command ${BUILD_COMMAND_VAR})
 
-find_program (QUEX quex quex.bat quex-exe.py REQUIRED HINTS ENV QUEX_PATH
-              DOC "Path to Quex's executable.")
+if (WIN32)
+  find_program (QUEX NAMES quex quex.bat quex-exep.py REQUIRED
+                HINTS ENV QUEX_PATH DOC "Path to Quex's executable.")
+else (WIN32)
+  find_program (QUEX NAMES quex quex-exe.py quex.bat REQUIRED
+                HINTS ENV QUEX_PATH DOC "Path to Quex's executable.")
+endif (WIN32)
+
 if (USE_ICONV)
   set (QUEX_CONVERTER "--iconv")
 elseif (USE_ICU)

@@ -130,8 +130,13 @@ if (NOT IS_DIRECTORY $ENV{QUEX_PATH})
     "The environment variable QUEX_PATH doesn't point to a valid directory.")
 endif (NOT IS_DIRECTORY $ENV{QUEX_PATH})
 
-find_program (QUEX quex quex.bat quex-exe.py REQUIRED HINTS ENV QUEX_PATH
-              DOC "Path to Quex's executable.")
+if (WIN32)
+  find_program (QUEX NAMES quex quex.bat quex-exep.py REQUIRED
+                HINTS ENV QUEX_PATH DOC "Path to Quex's executable.")
+else (WIN32)
+  find_program (QUEX NAMES quex quex-exe.py quex.bat REQUIRED
+                HINTS ENV QUEX_PATH DOC "Path to Quex's executable.")
+endif (WIN32)
 
 if (USE_ICONV)
   set (QUEX_CONVERTER "--iconv")
@@ -155,11 +160,11 @@ add_custom_command (OUTPUT ${QUEX_ENTITY} ${QUEX_ENTITY}.cpp
 set (QUEX_XML quex_files/trtok_clean_xml_XmlCleaner)
 add_custom_command (OUTPUT ${QUEX_XML} ${QUEX_XML}.cpp ${QUEX_XML}-token
                            ${QUEX_XML}-configuration ${QUEX_XML}-token_ids
-    COMMAND ${QUEX} --mode-files         ${CMAKE_CURRENT_SOURCE_DIR}/clean_xml.qx
-                    --engine                         trtok::clean_xml::XmlCleaner
-                    --buffer-element-size                                       4
-                    --token-prefix                          QUEX_PREPROC_WITHXML_
-                    --odir                 ${CMAKE_CURRENT_BINARY_DIR}/quex_files
+    COMMAND ${QUEX} --mode-files        ${CMAKE_CURRENT_SOURCE_DIR}/clean_xml.qx
+                    --engine                        trtok::clean_xml::XmlCleaner
+                    --buffer-element-size                                      4
+                    --token-prefix                         QUEX_PREPROC_WITHXML_
+                    --odir                ${CMAKE_CURRENT_BINARY_DIR}/quex_files
                     ${QUEX_CONVERTER}
     DEPENDS clean_xml.qx VERBATIM
     COMMENT "Building XmlCleaner with quex")
@@ -169,12 +174,12 @@ add_custom_command (OUTPUT ${QUEX_FEATURES} ${QUEX_FEATURES}.cpp
                            ${QUEX_FEATURES}-token
                            ${QUEX_FEATURES}-configuration
                            ${QUEX_FEATURES}-token_ids
-    COMMAND quex --mode-files     ${CMAKE_CURRENT_SOURCE_DIR}/read_features.qx
-                 --engine                 trtok::read_features::FeaturesReader
-                 --buffer-element-size                                       4
-                 --token-prefix                                 QUEX_FEATURES_
-                 --odir                 ${CMAKE_CURRENT_BINARY_DIR}/quex_files
-                 ${QUEX_CONVERTER}
+    COMMAND ${QUEX} --mode-files    ${CMAKE_CURRENT_SOURCE_DIR}/read_features.qx
+                    --engine                trtok::read_features::FeaturesReader
+                    --buffer-element-size                                      4
+                    --token-prefix                                QUEX_FEATURES_
+                    --odir                ${CMAKE_CURRENT_BINARY_DIR}/quex_files
+                    ${QUEX_CONVERTER}
     DEPENDS read_features.qx VERBATIM
     COMMENT "Building FeaturesReader with quex")
 
