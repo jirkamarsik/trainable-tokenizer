@@ -61,7 +61,7 @@ else (PCRE_CONFIG)
   include (LibFindMacros)
   
   # Try to use pkg-config's data to help find the include dir and lib file
-  libfind_pkg_search_modules (PCRECPP_PKGCONF pcre pcrecpp QUIET)
+  libfind_pkg_check_modules (PCRECPP_PKGCONF pcre pcrecpp QUIET)
 
   # Pass on any other options like macro definitions found by pkg-config
   set (PCRECPP_DEFINITIONS PCRECPP_PKGCONF_CFLAGS_OTHER)
@@ -79,5 +79,5 @@ else (PCRE_CONFIG)
   # all up and report
   set (PCRECPP_PROCESS_INCLUDES PCRECPP_INCLUDE_DIR)
   set (PCRECPP_PROCESS_LIBS PCRE_LIBRARY PCRECPP_LIBRARY)
-  libfind_process (PCRECPP)
+  libfind_process (PCRECPP pcrecpp.h)
 endif (PCRE_CONFIG)

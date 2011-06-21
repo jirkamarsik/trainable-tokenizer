@@ -23,4 +23,4 @@ find_library (MaxEnt_LIBRARY NAMES maxent HINTS ${MaxEnt_PKGCONF_LIBRARY_DIRS})
 # and report
 set (MaxEnt_PROCESS_INCLUDES MaxEnt_INCLUDE_DIR)
 set (MaxEnt_PROCESS_LIBS MaxEnt_LIBRARY)
-libfind_process (MaxEnt)
+libfind_process (MaxEnt maxentmodel.hpp)

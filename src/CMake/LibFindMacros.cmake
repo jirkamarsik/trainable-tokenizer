@@ -34,30 +34,41 @@ endmacro (libfind_pkg_check_modules)
 # Ditto for ${PREFIX}_PROCESS_LIBS and library files.
 # Will set ${PREFIX}_FOUND, ${PREFIX}_INCLUDE_DIRS and ${PREFIX}_LIBRARIES.
 # Also handles errors in case library detection was required, etc.
-macro (libfind_process PREFIX)
+macro (libfind_process PREFIX INDICATOR_HEADER)
   # Skip processing if already processed during this run
   if (NOT ${PREFIX}_FOUND)
     # Start with the assumption that the library was found
     set (${PREFIX}_FOUND TRUE)
+
+    set (INDICATOR_HEADER_FOUND FALSE)
 
     # Process all includes and set _FOUND to false if any are missing
     foreach (i ${${PREFIX}_PROCESS_INCLUDES})
       if (${i})
         set (${PREFIX}_INCLUDE_DIRS ${${PREFIX}_INCLUDE_DIRS} ${${i}})
         mark_as_advanced(${i})
+        if (EXISTS ${${i}}/${INDICATOR_HEADER})
+          set (INDICATOR_HEADER_FOUND TRUE)
+        endif (EXISTS ${${i}}/${INDICATOR_HEADER})
       else (${i})
         set (${PREFIX}_FOUND FALSE)
       endif (${i})
     endforeach (i)
+    
+    if (NOT INDICATOR_HEADER_FOUND)
+      message (STATUS "${PREFIX}: Could not find the required header \"${INDICATOR_HEADER}\" at any of the include dirs.")
+      set (${PREFIX}_FOUND FALSE)
+    endif (NOT INDICATOR_HEADER_FOUND)
 
     # Process all libraries and set _FOUND to false if any are missing
     foreach (i ${${PREFIX}_PROCESS_LIBS})
-      if (${i})
+      if (${i} AND EXISTS ${${i}})
         set (${PREFIX}_LIBRARIES ${${PREFIX}_LIBRARIES} ${${i}})
         mark_as_advanced(${i})
-      else (${i})
+      else (${i} AND EXISTS ${${i}})
+        message (STATUS "${PREFIX}: Could not find library at path \"${${i}}\".")
         set (${PREFIX}_FOUND FALSE)
-      endif (${i})
+      endif (${i} AND EXISTS ${${i}})
     endforeach (i)
 
     # Print message and/or exit on fatal error

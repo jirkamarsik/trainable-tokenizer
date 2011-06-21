@@ -80,5 +80,5 @@ else (ICU_CONFIG)
     # and report
     set (ICU_PROCESS_INCLUDES ICU_INCLUDE_DIR)
     set (ICU_PROCESS_LIBS ICU_LIBRARY)
-    libfind_process (ICU)
+    libfind_process (ICU unicode/utypes.h)
 endif (ICU_CONFIG)

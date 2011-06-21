@@ -23,4 +23,4 @@ find_library (LTDL_LIBRARY NAMES ltdl HINTS ${LTDL_PKGCONF_LIBRARY_DIRS})
 # and report
 set (LTDL_PROCESS_INCLUDES LTDL_INCLUDE_DIR)
 set (LTDL_PROCESS_LIBS LTDL_LIBRARY)
-libfind_process (LTDL)
+libfind_process (LTDL ltdl.h)

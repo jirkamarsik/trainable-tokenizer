@@ -20,8 +20,8 @@ else (LIBICONV_JUST_WORKS)
     include (LibFindMacros)
     
     # Try to use pkg-config's data to help find the include dir and lib file
-    libfind_pkg_search_modules (LIBICONV_PKGCONF iconv libiconv
-                                libiconv-2 libiconv2 c)
+    libfind_pkg_check_modules (LIBICONV_PKGCONF iconv libiconv
+                               libiconv-2 libiconv2 c)
 
     # Pass on any other options like macro definitions found by pkg-config
     set (LIBICONV_DEFINITIONS LIBICONV_PKGCONF_CFLAGS_OTHER)
@@ -36,6 +36,6 @@ else (LIBICONV_JUST_WORKS)
     # all up and report
     set (LIBICONV_PROCESS_INCLUDES LIBICONV_INCLUDE_DIR)
     set (LIBICONV_PROCESS_LIBS LIBICONV_LIBRARY)
-    libfind_process (LIBICONV)
+    libfind_process (LIBICONV iconv.h)
 
 endif (LIBICONV_JUST_WORKS)
