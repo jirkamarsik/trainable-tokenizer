@@ -10,6 +10,9 @@ add_definitions(-DBOOST_FILESYSTEM_VERSION=3)
 set (Boost_USE_STATIC_LIBS ON)
 set (Boost_USE_MULTITHREADED ON)
 set (Boost_USE_STATIC_RUNTIME OFF)
+# The FindBoost package is not future-proof, versions of newer packages
+# have to be added explicitly, see FindBoost.cmake.
+set (Boost_ADDITIONAL_VERSIONS "1.47" "1.47.0")
 find_package (Boost 1.46 REQUIRED program_options filesystem system thread)
 include_directories (${Boost_INCLUDE_DIRS})
 link_directories (${Boost_LIBRARY_DIRS})
@@ -118,6 +121,9 @@ configure_file (${CMAKE_CURRENT_SOURCE_DIR}/CMake/FindICU.cmake
 
 configure_file (${CMAKE_CURRENT_SOURCE_DIR}/CMake/FindLIBICONV.cmake
                 ${CMAKE_CURRENT_BINARY_DIR}/code/FindLIBICONV.cmake COPYONLY)
+
+configure_file (${CMAKE_CURRENT_SOURCE_DIR}/CMake/LibFindMacros.cmake
+                ${CMAKE_CURRENT_BINARY_DIR}/code/LibFindMacros.cmake COPYONLY)
 
 configure_file (${CMAKE_CURRENT_SOURCE_DIR}/roughtok/CMakeLists.txt.in
                 ${CMAKE_CURRENT_BINARY_DIR}/code/CMakeLists.txt @ONLY)

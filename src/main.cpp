@@ -14,7 +14,6 @@
 #include "tbb/pipeline.h"
 #include "tbb/concurrent_queue.h"
 #include <ltdl.h>
-#include <pcre.h>
 #include <pcrecpp.h>
 #include <maxentmodel.hpp>
 
@@ -209,7 +208,7 @@ int main(int argc, char const **argv) {
     } else if (s_mode == "evaluate") {
       mode = EVALUATE_MODE;
     } else {
-      END_WITH_ERROR("trtok", "Mode " + s_mode + " not recognized. Supported "
+      END_WITH_ERROR("trtok", "Mode " << s_mode << " not recognized. Supported "
           "modes include prepare, train, tokenize and evaluate. See trtok "
           "--help for more.");
     }
@@ -407,7 +406,7 @@ int main(int argc, char const **argv) {
       regex_file.close();
 
       // compile ...
-      pcrecpp::RE regex(regex_string, PCRE_UTF8 | PCRE_UCP);
+      pcrecpp::RE regex(regex_string, pcrecpp::UTF8());
       if (regex.error() != "") {
         END_WITH_ERROR(file->native(), "The following error occured when "
             "compiling the regular expression: " << regex.error());
@@ -593,7 +592,7 @@ int main(int argc, char const **argv) {
     // The product: fnre_regexp, fnre_replace
     pcrecpp::RE fnre_regexp(
                     s_filename_regexp.substr(1, second_delimiter_pos - 1),
-                    PCRE_UTF8 | PCRE_UCP);
+                    pcrecpp::UTF8());
     string fnre_replace = s_filename_regexp.substr(second_delimiter_pos + 1,
                           third_delimiter_pos - (second_delimiter_pos + 1));
 
@@ -817,7 +816,7 @@ int main(int argc, char const **argv) {
       if ((mode == TRAIN_MODE) || (mode == EVALUATE_MODE)) {
         
         if (*input_file == "-") {
-          END_WITH_ERROR("trtok", "train mode and evaluate mode cannot act on "
+          END_WITH_ERROR("trtok", s_mode << " mode cannot act on "
               "the standard input alone.");
         }
 
