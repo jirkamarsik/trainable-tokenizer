@@ -108,9 +108,9 @@ int main(int argc, char const **argv) {
         "Specifies the input and output encoding of the tokenizer. UTF-8 is "
         "used if none is specified.")
       ("file-list,l", po::value< vector<string> >(&sv_file_lists)->composing(),
-        "A list of input files to be processed. If mode is TRAIN and this "
+        "A list of input files to be processed. If mode is 'train' and this "
         "setting is omitted, the file train.fl in scheme-path is used "
-        "instead. For the EVALUATE mode, the file evaluate.fl is used as "
+        "instead. For the 'evaluate' mode, the file evaluate.fl is used as "
         "default. If the paths are relative, they are evaluated with respect "
         "to the location of the file list. More than 1 file list can be "
         "specified.")
@@ -118,11 +118,11 @@ int main(int argc, char const **argv) {
           po::value<string>(&s_filename_regexp)
                            ->default_value("/(.*)\\.txt/\\1.tok/"),
         "A regular expression/replacement string used to generate a set of "
-        "pairs of input/output files. Output files are written to in TOKENIZE "
-        "mode and are used as correct answers in TRAIN and EVALUATE modes. If "
-        "no such expression is given in TRAIN and EVALUATE modes, the "
+        "pairs of input/output files. Output files are written to in 'tokenize' "
+        "mode and are used as correct answers in 'train' and 'evaluate' modes. If "
+        "no such expression is given in 'train' and 'evaluate' modes, the "
         "contents of files train.fnre and evaluate.fnre in the directory "
-        "scheme-path are used instead. If the mode is TOKENIZE, the output of "
+        "scheme-path are used instead. If the mode is 'tokenize', the output of "
         "tokenization is printed to the standard output.")
       ("preserve-paragraphs,p", po::bool_switch(&o_preserve_paragraphs),
         "Replaces paragraph breaks with a blank line.")
@@ -149,10 +149,10 @@ int main(int argc, char const **argv) {
         "by the expansion in the output in their literal form.")
       ("questions,q", po::value<string>(&s_qa_file)->default_value("-"),
         "Prints the questions presented to the maximum entropy classifier to "
-        "the specified file. In TOKENIZE mode, the classifier's answer is "
-        "present as well; in TRAIN mode, it is the answer induced from the "
-        "data. In EVALUATE mode, both the answer given by the classifier and "
-        "the correct answer are output. If no file is given in EVALUATE mode, "
+        "the specified file. In 'tokenize' mode, the classifier's answer is "
+        "present as well; in 'train' mode, it is the answer induced from the "
+        "data. In 'evaluate' mode, both the answer given by the classifier and "
+        "the correct answer are output. If no file is given in 'evaluate' mode, "
         "the questions are output to the standard output instead.")
       ("verbose,v", po::bool_switch(&o_verbose),
         "If set, the Maxent toolkit will output its reports.")
