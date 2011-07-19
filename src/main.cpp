@@ -65,16 +65,21 @@ bool path_compare(fs::path const &a, fs::path const &b) {
 
 void include_listed_files(fs::path const &file_list_path,
                           vector<string> &input_files) {
-    fs::ifstream file_list_stream(file_list_path);
+    istream *file_list_stream_p = (file_list_path == "-") ? &std::cin
+                                      : new fs::ifstream(file_list_path);
     fs::path file_list_dir = file_list_path.parent_path();
     string line;
-    while (getline(file_list_stream, line)) {
+    while (getline(*file_list_stream_p, line)) {
       if (line.size() > 0)
         // the listed files are relative to the directory of the file list
         // if not already absolute
         input_files.push_back(fs::absolute(line, file_list_dir).native());
     }
-    file_list_stream.close();
+    if (file_list_path != "-") {
+      fs::ifstream *file_list_file_stream_p = (fs::ifstream*)file_list_stream_p;
+      file_list_file_stream_p->close();
+      delete file_list_file_stream_p;
+    }
 }
 
 
@@ -517,7 +522,7 @@ int main(int argc, char const **argv) {
 
       fs::path file_list_path(*file_list);
 
-      if (!fs::exists(file_list_path)) {
+      if (!fs::exists(file_list_path) && (file_list_path != "-")) {
         END_WITH_ERROR(*file_list, "File not found.");
       }
 
