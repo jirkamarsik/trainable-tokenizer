@@ -8,7 +8,7 @@ set (LIBS)
 
 # The FindBoost package is not future-proof, versions of newer packages
 # have to be added explicitly, see FindBoost.cmake.
-set Boost_ADDITIONAL_VERSIONS "1.47" "1.47.0")
+set (Boost_ADDITIONAL_VERSIONS "1.47" "1.47.0")
 find_package (Boost 1.46 REQUIRED program_options filesystem system thread)
 include_directories (${Boost_INCLUDE_DIRS})
 link_directories (${Boost_LIBRARY_DIRS})
