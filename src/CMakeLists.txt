@@ -6,6 +6,16 @@ set (CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH}
                       "${CMAKE_CURRENT_SOURCE_DIR}/CMake/")
 set (LIBS)
 
+# The best hack I know of for looking for static libraries.
+set (PREFER_STATIC_LIBRARIES "OFF" CACHE BOOL "Whether to prefer static libraries over dynamic ones.")
+if (PREFER_STATIC_LIBRARIES)
+  IF(WIN32)
+    SET(CMAKE_FIND_LIBRARY_SUFFIXES .lib .a ${CMAKE_FIND_LIBRARY_SUFFIXES})
+  ELSE(WIN32)
+    SET(CMAKE_FIND_LIBRARY_SUFFIXES .a ${CMAKE_FIND_LIBRARY_SUFFIXES})
+  ENDIF(WIN32)
+ENDIF (PREFER_STATIC_LIBRARIES)
+
 # The FindBoost package is not future-proof, versions of newer packages
 # have to be added explicitly, see FindBoost.cmake.
 set (Boost_ADDITIONAL_VERSIONS "1.47" "1.47.0")
