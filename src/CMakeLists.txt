@@ -134,11 +134,21 @@ if (NOT IS_DIRECTORY $ENV{QUEX_PATH})
 endif (NOT IS_DIRECTORY $ENV{QUEX_PATH})
 
 if (WIN32)
-  find_program (QUEX NAMES quex quex.bat quex-exep.py REQUIRED
-                HINTS ENV QUEX_PATH DOC "Path to Quex's executable.")
+  find_program (QUEX NAMES quex quex.bat quex-exe.py REQUIRED
+                HINTS ENV QUEX_PATH DOC "Path to Quex's executable."
+                NO_DEFAULT_PATH)
+  if(NOT QUEX)
+    find_program (QUEX NAMES quex quex.bat quex-exe.py REQUIRED
+                  DOC "Path to Quex's executable.")
+  endif(NOT QUEX)
 else (WIN32)
   find_program (QUEX NAMES quex quex-exe.py quex.bat REQUIRED
-                HINTS ENV QUEX_PATH DOC "Path to Quex's executable.")
+                HINTS ENV QUEX_PATH DOC "Path to Quex's executable."
+                NO_DEFAULT_PATH)
+  if(NOT QUEX)
+    find_program (QUEX NAMES quex quex-exe.py quex.bat REQUIRED
+                  DOC "Path to Quex's executable.")
+  endif(NOT QUEX)
 endif (WIN32)
 
 if (USE_ICONV)
