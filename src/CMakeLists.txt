@@ -6,13 +6,9 @@ set (CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH}
                       "${CMAKE_CURRENT_SOURCE_DIR}/CMake/")
 set (LIBS)
 
-add_definitions(-DBOOST_FILESYSTEM_VERSION=3)
-set (Boost_USE_STATIC_LIBS ON)
-set (Boost_USE_MULTITHREADED ON)
-set (Boost_USE_STATIC_RUNTIME OFF)
 # The FindBoost package is not future-proof, versions of newer packages
 # have to be added explicitly, see FindBoost.cmake.
-set (Boost_ADDITIONAL_VERSIONS "1.47" "1.47.0")
+set Boost_ADDITIONAL_VERSIONS "1.47" "1.47.0")
 find_package (Boost 1.46 REQUIRED program_options filesystem system thread)
 include_directories (${Boost_INCLUDE_DIRS})
 link_directories (${Boost_LIBRARY_DIRS})
