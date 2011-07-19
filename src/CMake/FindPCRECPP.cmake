@@ -37,47 +37,45 @@ if (PCRE_CONFIG)
                         ${PCRE_CONFIG_LINKER})
   endif (WIN32)
 
-  foreach (INCLUDE_DIR IN LISTS PCRE_CONFIG_PREPROCESSOR)
-    string (REGEX REPLACE "^-I" "" INCLUDE_DIR ${INCLUDE_DIR})
-    set (PCRECPP_INCLUDE_DIRS ${PCRECPP_INCLUDE_DIRS} ${INCLUDE_DIR})
-  endforeach (INCLUDE_DIR)
+  foreach (COMPILER_ARG IN LISTS PCRE_CONFIG_PREPROCESSOR)
+    if (COMPILER_ARG MATCHES "^-I.+")
+      string (REGEX REPLACE "^-I" "" INCLUDE_DIR ${COMPILER_ARG})
+      set (PCRECONF_INCLUDE_DIRS ${PCRECONF_INCLUDE_DIRS} ${INCLUDE_DIR})
+    elseif (LINKER_ARG MATCHES "^-I.+")
+      set (PCRECONF_CFLAGS_OTHER ${PCRECONF_CFLAGS_OTHER} ${COMPILER_ARG})
+    endif (COMPILER_ARG MATCHES "^-I.+")
+  endforeach (COMPILER_ARG)
 
   foreach (LINKER_ARG IN LISTS PCRE_CONFIG_LINKER)
     if (LINKER_ARG MATCHES "^-L.+")
       string (REGEX REPLACE "^-L" "" LIBRARY_DIR ${LINKER_ARG})
-      set (PCRECPP_LIBRARY_DIRS ${PCRECPP_LIBRARY_DIRS} ${LIBRARY_DIR})
-    elseif (LINKER_ARG MATCHES "^-l.+")
-      string (REGEX REPLACE "^-l" "" LIBRARY ${LINKER_ARG})
-      set (PCRECPP_LIBRARIES ${PCRECPP_LIBRARIES} ${LIBRARY})
+      set (PCRECONF_LIBRARY_DIRS ${PCRECONF_LIBRARY_DIRS} ${LIBRARY_DIR})
     endif (LINKER_ARG MATCHES "^-L.+")
   endforeach (LINKER_ARG)
 
-  message (STATUS "Found PCRECPP")
-  set (PCRECPP_FOUND ON)
-
-# We search using the traditional means (pkg-config, then simple find)
-else (PCRE_CONFIG)
-  # A package full of convenience functions for writing Find modules
-  include (LibFindMacros)
-  
-  # Try to use pkg-config's data to help find the include dir and lib file
-  libfind_pkg_check_modules (PCRECPP_PKGCONF pcre pcrecpp QUIET)
-
-  # Pass on any other options like macro definitions found by pkg-config
-  set (PCRECPP_DEFINITIONS PCRECPP_PKGCONF_CFLAGS_OTHER)
-  
-  # Find include dir and library file, possibly with help of pkg-config
-  find_path (PCRECPP_INCLUDE_DIR NAMES pcre.h pcrecpp.h
-             HINTS ${PCRECPP_PKGCONF_INCLUDE_DIRS}
-                   ${PCRECPP_PKGCONF_INCLUDEDIR})
-  find_library (PCRE_LIBRARY NAMES pcre
-                HINTS ${PCRECPP_PKGCONF_LIBRARY_DIRS})
-  find_library (PCRECPP_LIBRARY NAMES pcrecpp
-                HINTS ${PCRECPP_PKGCONF_LIBRARY_DIRS})
-
-  # Set the PCRECPP_PROCESS_ variables and call libfind_process to wrap it
-  # all up and report
-  set (PCRECPP_PROCESS_INCLUDES PCRECPP_INCLUDE_DIR)
-  set (PCRECPP_PROCESS_LIBS PCRE_LIBRARY PCRECPP_LIBRARY)
-  libfind_process (PCRECPP pcrecpp.h)
 endif (PCRE_CONFIG)
+
+# A package full of convenience functions for writing Find modules
+include (LibFindMacros)
+
+# Try to use pkg-config's data to help find the include dir and lib file
+libfind_pkg_check_modules (PCRECPP_PKGCONF pcre pcrecpp QUIET)
+
+# Pass on any other options like macro definitions found by pkg-config
+set (PCRECPP_DEFINITIONS PCRECONF_CFLAGS_OTHER PCRECPP_PKGCONF_CFLAGS_OTHER)
+
+# Find include dir and library file, possibly with help of pkg-config
+find_path (PCRECPP_INCLUDE_DIR NAMES pcre.h pcrecpp.h
+           HINTS ${PCRECONF_INCLUDE_DIRS}
+                 ${PCRECPP_PKGCONF_INCLUDE_DIRS}
+                 ${PCRECPP_PKGCONF_INCLUDEDIR})
+find_library (PCRE_LIBRARY NAMES pcre
+              HINTS ${PCRECONF_LIBRARY_DIRS} ${PCRECPP_PKGCONF_LIBRARY_DIRS})
+find_library (PCRECPP_LIBRARY NAMES pcrecpp
+              HINTS ${PCRECONF_LIBRARY_DIRS} ${PCRECPP_PKGCONF_LIBRARY_DIRS})
+
+# Set the PCRECPP_PROCESS_ variables and call libfind_process to wrap it
+# all up and report
+set (PCRECPP_PROCESS_INCLUDES PCRECPP_INCLUDE_DIR)
+set (PCRECPP_PROCESS_LIBS PCRE_LIBRARY PCRECPP_LIBRARY)
+libfind_process (PCRECPP pcrecpp.h)
