@@ -64,6 +64,7 @@ public:
         m_window = new token_t[m_window_size];
         if (m_mode == TRAIN_MODE) {
           m_model.begin_add_event();
+          m_processing_heldout_data = false;
         }
         reset();
     }
@@ -103,6 +104,14 @@ public:
                       training_parameters.convergence_tolerance);
       }
       m_model.save(model_path, save_as_binary);
+    }
+
+    void switch_to_training_data() {
+      m_processing_heldout_data = false;
+    }
+
+    void switch_to_heldout_data() {
+      m_processing_heldout_data = true;
     }
 
     ~Classifier() {
@@ -147,6 +156,8 @@ private:
     int m_current_input_line;
     // The current line of the annotated file when aligning data.
     int m_current_annot_line;
+    // Are we currently processing heldout data?
+    bool m_processing_heldout_data;
 };
 
 }

@@ -406,8 +406,16 @@ bool compile_rough_lexer(vector<fs::path> const &split_files,
       }
     }
 
-        
+    
+    // The rough tokenizer definition is new, we will be generating
+    // and compiling the rough tokenizer.
     if (files_changed || !fs::exists(build_path / "roughtok")) {
+
+        if (getenv("QUEX_PATH") == "") {
+            cerr << "Warning: The environment variable QUEX_PATH is not set, "
+                 << "compilation of rough tokenizer will most likely fail."
+                 << endl;
+        }
 
         vector<context_t> split_contexts, join_contexts;
         vector<uint32_t> begin_chars, end_chars;

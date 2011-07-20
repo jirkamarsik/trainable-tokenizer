@@ -191,7 +191,11 @@ void Classifier::process_center_token(chunk_t *out_chunk_p) {
       }
     }
     else if (m_mode == TRAIN_MODE) {
-      m_model.add_event(context, true_outcome);
+      if (m_processing_heldout_data) {
+        m_model.add_heldout_event(context, true_outcome);
+      } else {
+        m_model.add_event(context, true_outcome);
+      }
       m_n_events_registered++;
     }
     else if (m_mode == TOKENIZE_MODE) {

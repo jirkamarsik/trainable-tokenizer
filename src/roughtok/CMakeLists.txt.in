@@ -32,7 +32,11 @@ elseif (USE_ICU)
   message (STATUS "Using ICU")
 endif (USE_ICONV)
 
-build_command (BUILD_COMMAND_VAR)
+if (CMAKE_VERSION VERSION_LESS "2.8.1")
+  build_command (BUILD_COMMAND_VAR make)
+else (CMAKE_VERSION VERSION_LESS "2.8.1")
+  build_command (BUILD_COMMAND_VAR)
+endif (CMAKE_VERSION VERSION_LESS "2.8.1")
 file (WRITE build_command ${BUILD_COMMAND_VAR})
 
 if (WIN32)

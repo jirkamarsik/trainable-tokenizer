@@ -96,7 +96,7 @@ int main(int argc, char const **argv) {
     string s_qa_file;
 
     vector<string> sv_input_files;
-    vector<string> sv_file_lists;
+    vector<string> sv_file_lists, sv_heldout_file_lists;
     string s_filename_regexp;
 
     bool o_preserve_paragraphs, o_detokenize, o_preserve_segments;
@@ -119,6 +119,10 @@ int main(int argc, char const **argv) {
         "default. If the paths are relative, they are evaluated with respect "
         "to the location of the file list. More than 1 file list can be "
         "specified.")
+      ("heldout-file-list,h",
+          po::value< vector<string> >(&sv_heldout_file_lists)
+                           ->composing(),
+        "A list of input files to serve as heldout data during training...")
       ("filename-regexp,r",
           po::value<string>(&s_filename_regexp)
                            ->default_value("/(.*)\\.txt/\\1.tok/"),
@@ -301,7 +305,7 @@ int main(int argc, char const **argv) {
     vector<fs::path> split_files, join_files, begin_files, end_files,
                      listp_files, rep_files;
     fs::path features_file, maxentparams_file;
-    fs::path default_file_list, default_fnre_file;
+    fs::path default_file_list, default_heldout_file_list, default_fnre_file;
     boost::unordered_map< string, vector<fs::path>* > file_vectors;
     file_vectors[".split"] = &split_files;
     file_vectors[".join"] = &join_files;
@@ -327,6 +331,8 @@ int main(int argc, char const **argv) {
           lookup->second->push_back(*file);
       } else if ((file->extension() == ".fl") && (file->stem() == s_mode)) {
           default_file_list = *file;
+      } else if ((file->extension() == ".fl") && (file->stem() == "heldout")) {
+          default_heldout_file_list = *file;
       } else if ((file->extension() == ".fnre") && (file->stem() == s_mode)) {
           default_fnre_file = *file;
       } else if (file->filename() == "features") {
@@ -540,6 +546,36 @@ int main(int argc, char const **argv) {
     if (input_files.size() == 0) {
       input_files.push_back("-");
     }
+
+
+    // This marks what part of the input_files is composed of regular
+    // input files (i.e. not-heldout files).
+    int num_nonheldout_files = input_files.size();
+
+    // If we are in 'train' mode, we also add the heldout files after
+    // the regular input files.
+    if (mode == TRAIN_MODE) {
+
+      // We first check for any explicit heldout file lists...
+      for (vector<string>::const_iterator file_list = sv_heldout_file_lists.begin();
+           file_list != sv_heldout_file_lists.end(); file_list++) {
+
+        fs::path file_list_path(*file_list);
+
+        if (!fs::exists(file_list_path) && (file_list_path != "-")) {
+          END_WITH_ERROR(*file_list, "File not found.");
+        }
+
+        include_listed_files(file_list_path, input_files);
+      }
+
+      // ... and if there were none, we add the default heldout.fl.
+      if ((input_files.size() == num_nonheldout_files)
+          && !default_heldout_file_list.empty()) {
+        include_listed_files(default_heldout_file_list, input_files);
+      }
+    }
+
 
 
     // PARSING THE FILENAME REGEXP/REPLACEMENT STRING
@@ -796,6 +832,13 @@ int main(int argc, char const **argv) {
     for (vector<string>::const_iterator input_file = input_files.begin();
          input_file != input_files.end(); input_file++) {
       
+      // If we have processed all the regular input files and there are more
+      // files to process, it must be the heldout data and so we notify the
+      // Classifier.
+      if (input_file - input_files.begin() == num_nonheldout_files) {
+        classifier_p->switch_to_heldout_data();
+      }
+
       fs::path input_file_path(*input_file);
       string other_file(*input_file);
 
