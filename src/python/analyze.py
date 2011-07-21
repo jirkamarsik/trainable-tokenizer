@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/python
 
 import fileinput
 
@@ -90,16 +90,16 @@ tok_fm = 2 * (tok_prec * tok_rec) / float(tok_prec + tok_rec) \
           and tok_prec + tok_rec > 0  else 'no data'
 
 
-print('Number of events:', eff_tot)
-print('')
-print('Effective accuracy:', eff_acc)
-print('')
-print('Segmentation accuracy:', seg_acc)
-print('Segmentation precision:', seg_prec)
-print('Segmentation recall:', seg_rec)
-print('Segmentation F-measure:', seg_fm)
-print('')
-print('Tokenization accuracy:', tok_acc)
-print('Tokenization precision:', tok_prec)
-print('Tokenization recall:', tok_rec)
-print('Tokenization F-measure:', tok_fm)
+print 'Number of events:', eff_tot
+print ''
+print 'Effective accuracy:', eff_acc
+print ''
+print 'Segmentation accuracy:', seg_acc
+print 'Segmentation precision:', seg_prec
+print 'Segmentation recall:', seg_rec
+print 'Segmentation F-measure:', seg_fm
+print ''
+print 'Tokenization accuracy:', tok_acc
+print 'Tokenization precision:', tok_prec
+print 'Tokenization recall:', tok_rec
+print 'Tokenization F-measure:', tok_fm
