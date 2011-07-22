@@ -20,7 +20,8 @@ public:
                 tbb::filter(tbb::filter::serial_in_order),
                 m_wrapper_p(wrapper_p),
                 m_hit_end(false),
-                m_first_chunk(true)
+                m_first_chunk(true),
+                m_time_spent(0)
     {}
 
     // setup prepares the RoughTokenizer to read from an encoded stream
@@ -43,6 +44,8 @@ public:
     // specified during compilation) and then sends them down the pipeline
     // as a chunk_t.
     virtual void* operator()(void*);
+
+    double m_time_spent;
 
 private:
     // Configuration

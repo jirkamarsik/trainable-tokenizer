@@ -989,4 +989,13 @@ int main(int argc, char const **argv) {
     }
 
     lt_dlexit();
+
+    clog << "Time spent in RoughTokenizer: " << rough_tokenizer_p->m_time_spent
+      << endl;
+    clog << "Time spent in FeatureExtractor: " << feature_extractor_p->m_time_spent
+      << endl;
+    clog << "Time spent in Classifier: " << classifier_p->m_time_spent
+      << endl;
+    clog << "Time spent in OutputFormatter: " << output_formatter_p->m_time_spent
+      << endl;
 }

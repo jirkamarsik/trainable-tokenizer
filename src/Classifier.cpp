@@ -8,6 +8,8 @@
 #include "utils.hpp"
 #include "alignment_exception.hpp"
 
+#include <tbb/tick_count.h>
+
 using namespace std;
 
 #define WINDOW_OFFSET(offset) ((m_center_token + offset < 0) ?\
@@ -392,6 +394,8 @@ void Classifier::align_chunk_with_solution(chunk_t *in_chunk_p) {
 
 
 void* Classifier::operator()(void* input_p) {
+  tbb::tick_count start_time = tbb::tick_count::now();
+
   chunk_t* in_chunk_p = (chunk_t*)input_p;
 
   if ((m_mode == TRAIN_MODE) || (m_mode == EVALUATE_MODE)) {
@@ -414,6 +418,9 @@ void* Classifier::operator()(void* input_p) {
   }
 
   delete in_chunk_p;
+
+  m_time_spent += (tbb::tick_count::now() - start_time).seconds();
+
   return out_chunk_p;
 }
 

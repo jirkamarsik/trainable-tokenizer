@@ -3,9 +3,12 @@
 #include "FeatureExtractor.hpp"
 #include "token_t.hpp"
 
+#include <tbb/tick_count.h>
+
 namespace trtok {
 
 void* FeatureExtractor::operator()(void *input_p) {
+    tbb::tick_count start_time = tbb::tick_count::now();
 
     chunk_t *chunk_p = (chunk_t*)input_p;
 
@@ -26,6 +29,8 @@ void* FeatureExtractor::operator()(void *input_p) {
         token->property_flags[i->second] = true;
       }
     }
+
+    m_time_spent += (tbb::tick_count::now() - start_time).seconds();
 
     return chunk_p;
 }

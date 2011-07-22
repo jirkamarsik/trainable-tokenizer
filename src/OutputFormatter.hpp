@@ -36,7 +36,8 @@ public:
             m_detokenize(detokenize),
             m_preserve_segments(preserve_segments),
             m_preserve_paragraphs(preserve_paragraphs),
-            m_cutout_queue_p(cutout_queue_p)
+            m_cutout_queue_p(cutout_queue_p),
+            m_time_spent(0)
     {
         reset();
     }
@@ -50,6 +51,8 @@ public:
     // the invoke operator takes a chunk pointer and sends its contents
     // along with the mandated whitespace down the output stream
     virtual void* operator()(void *input_p);
+
+    double m_time_spent;
 
 private:
     // Configuration

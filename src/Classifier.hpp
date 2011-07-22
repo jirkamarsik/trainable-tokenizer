@@ -59,7 +59,8 @@ public:
               m_combined_features(combined_features),
               m_qa_stream_p(qa_stream_p),
               m_annot_stream_p(annot_stream_p),
-              m_n_events_registered(0)
+              m_n_events_registered(0),
+              m_time_spent(0)
     {
         m_window = new token_t[m_window_size];
         if (m_mode == TRAIN_MODE) {
@@ -122,6 +123,8 @@ public:
     void process_center_token(chunk_t *out_chunk_p);
     void align_chunk_with_solution(chunk_t *in_chunk_p);
     virtual void* operator()(void *input_p);
+
+    double m_time_spent;
 
 private:
     bool consume_whitespace();

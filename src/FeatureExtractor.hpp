@@ -25,7 +25,8 @@ public:
         tbb::filter(tbb::filter::parallel),
         m_n_properties(n_properties),
         m_regex_properties(regex_properties),
-        m_word_to_list_props(word_to_list_props)
+        m_word_to_list_props(word_to_list_props),
+        m_time_spent(0)
         {}
     
     void reset() {}
@@ -34,6 +35,8 @@ public:
     // expressions and the BST and checks the token's property_flags
     // appropriately.
     virtual void* operator()(void *input_p);
+
+    double m_time_spent;
 
 private:
     int m_n_properties;

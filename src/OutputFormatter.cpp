@@ -6,9 +6,13 @@ typedef boost::uint8_t uint8_t;
 #include "token_t.hpp"
 #include "cutout_t.hpp"
 
+#include <tbb/tick_count.h>
+
 namespace trtok {
 
 void* OutputFormatter::operator() (void *input_p) {
+  tbb::tick_count start_time = tbb::tick_count::now();
+
   if (!m_have_cutout) {
     m_cutout_queue_p->pop(m_last_cutout);
     m_have_cutout = true;
@@ -113,6 +117,8 @@ void* OutputFormatter::operator() (void *input_p) {
   // the rough tokenizer which is responsible for repeatedly allocating
   // these chunks.
   delete chunk_p;
+
+  m_time_spent += (tbb::tick_count::now() - start_time).seconds();
 
   return NULL;
 }

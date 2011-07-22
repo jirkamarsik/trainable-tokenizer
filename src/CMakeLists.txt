@@ -89,7 +89,7 @@ set (LIBS ${LIBS} ${LTDL_LIBRARIES})
 
 set (CHUNK_SIZE 256 CACHE STRING
      "Number of rough tokens constituting a work unit in the pipeline.")
-set (WORK_UNIT_COUNT 8 CACHE STRING
+set (WORK_UNIT_COUNT 1 CACHE STRING
      "The number of token chunks flowing through the pipeline.")
 set (ACCUMULATOR_CAPACITY 256 CACHE STRING
      "Maximum size of Quex's accumulator in the TextCleaner stage.")

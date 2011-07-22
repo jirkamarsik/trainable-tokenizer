@@ -6,9 +6,13 @@
 #include "roughtok/roughtok_wrapper.hpp"
 #include "token_t.hpp"
 
+#include <tbb/tick_count.h>
+
 namespace trtok {
 
 void* RoughTokenizer::operator()(void*) {
+  tbb::tick_count start_time = tbb::tick_count::now();
+
   if (m_hit_end) {
     // Returing NULL signifies the end of processing to TBB
     return NULL;
@@ -77,6 +81,9 @@ void* RoughTokenizer::operator()(void*) {
   }
   
   chunk_p->is_final = m_hit_end;
+
+  m_time_spent += (tbb::tick_count::now() - start_time).seconds();
+
   return chunk_p;
 }
 
