@@ -60,7 +60,8 @@ public:
               m_qa_stream_p(qa_stream_p),
               m_annot_stream_p(annot_stream_p),
               m_n_events_registered(0),
-              m_time_spent(0)
+              m_time_spent(0),
+              m_time_spent_classifying(0)
     {
         m_window = new token_t[m_window_size];
         if (m_mode == TRAIN_MODE) {
@@ -125,6 +126,7 @@ public:
     virtual void* operator()(void *input_p);
 
     double m_time_spent;
+    double m_time_spent_classifying;
 
 private:
     bool consume_whitespace();

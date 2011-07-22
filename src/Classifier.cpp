@@ -179,7 +179,10 @@ void Classifier::process_center_token(chunk_t *out_chunk_p) {
     }
 
     if ((m_mode == TOKENIZE_MODE) || (m_mode == EVALUATE_MODE)) {
+      tbb::tick_count before_classification = tbb::tick_count::now();
       predicted_outcome = m_model.predict(context);
+      m_time_spent_classifying += (tbb::tick_count::now() - before_classification)
+                                                                       .seconds();
     }
 
     if (m_mode == PREPARE_MODE) {
