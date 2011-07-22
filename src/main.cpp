@@ -32,6 +32,8 @@
 #include "OutputFormatter.hpp"
 #include "Encoder.hpp"
 
+#include <tbb/tick_count.h>
+
 using namespace std;
 using namespace trtok;
 namespace po = boost::program_options;
@@ -84,6 +86,8 @@ void include_listed_files(fs::path const &file_list_path,
 
 
 int main(int argc, char const **argv) {
+
+    tbb::tick_count start_time = tbb::tick_count::now();
 
     // PARSING AND CHECKING THE ARGUMENTS
 
@@ -255,6 +259,7 @@ int main(int argc, char const **argv) {
       END_WITH_ERROR("trtok", "The double-dot isn't allowed in scheme paths.");
     }
 
+    tbb::tick_count args_parsed = tbb::tick_count::now();
 
     // READING THE CONFIG FILES
     //
@@ -349,6 +354,8 @@ int main(int argc, char const **argv) {
         fs::path(e_trtok_path) / fs::path("build") / scheme_rel_path;
     fs::create_directories(build_path);
 
+    tbb::tick_count scanned_config_files = tbb::tick_count::now();
+
 
     // COMPILING AND LOADING THE ROUGH TOKENIZER
     try {
@@ -381,6 +388,8 @@ int main(int argc, char const **argv) {
     factory_func_t factory_func_p = (factory_func_t)factory_func_void_p;
     IRoughLexerWrapper *rough_lexer_wrapper = factory_func_p();
 
+
+    tbb::tick_count roughtok_loaded = tbb::tick_count::now();
 
     // READING AND PARSING THE PROPERTY DEFINITIONS
     
@@ -435,6 +444,8 @@ int main(int argc, char const **argv) {
       n_basic_properties++;
     }
 
+    tbb::tick_count regex_props_processed = tbb::tick_count::now();
+
     // The words belonging to list properties are inserted into
     // a BST along with the ids of the list properties they belong to.
     multimap<string, int> word_to_list_props;
@@ -460,6 +471,8 @@ int main(int argc, char const **argv) {
       n_properties++;
       n_basic_properties++;
     }
+
+    tbb::tick_count list_props_processed = tbb::tick_count::now();
 
     // Finally we add the two "builtin" properties.
     if (prop_name_to_id.count("%length") > 0) {
@@ -501,6 +514,8 @@ int main(int argc, char const **argv) {
     if (read_features_exit_code != 0) {
       return read_features_exit_code;
     }
+
+    tbb::tick_count features_read = tbb::tick_count::now();
 
     // DETERMINING THE INPUT FILES
 
@@ -644,6 +659,7 @@ int main(int argc, char const **argv) {
           << fnre_regexp.error());
     }
     
+    tbb::tick_count file_lists_parsed = tbb::tick_count::now();
 
     // PARSING OTHER TIDBITS
 
@@ -708,6 +724,7 @@ int main(int argc, char const **argv) {
       maxentparams_stream.close();
     }
 
+    tbb::tick_count training_params_parsed = tbb::tick_count::now();
 
     // CONSTRUCTING THE PIPELINE
 
@@ -825,6 +842,9 @@ int main(int argc, char const **argv) {
       encoder_p = new Encoder(output_pipe_from_p, s_encoding);
 
     } // if ((mode == PREPARE_MODE) || (mode == TOKENIZE_MODE))
+
+
+    tbb::tick_count pipeline_setup = tbb::tick_count::now();
     
     
     // RUNNING THE PIPELINE
@@ -972,6 +992,8 @@ int main(int argc, char const **argv) {
       }
     }
 
+    tbb::tick_count processing_done = tbb::tick_count::now();
+
     // If our mission was to train a maxent model, then by now the Classifier
     // has accumulated all the required questions and answers, so we can hand
     // it over to the Maxent toolkit to do the rest.
@@ -979,6 +1001,8 @@ int main(int argc, char const **argv) {
       classifier_p->train_model(training_parameters, model_path.native(),
                                 save_model_as_binary);
     }
+
+    tbb::tick_count training_done = tbb::tick_count::now();
 
     if (qa_stream_p != NULL) {
       qa_stream_p->flush();
@@ -990,6 +1014,33 @@ int main(int argc, char const **argv) {
 
     lt_dlexit();
 
+    tbb::tick_count end_time = tbb::tick_count::now();
+
+    clog << "Total: " << (end_time - start_time).seconds() << endl;
+    clog << "  Initialization: " << (pipeline_setup - start_time).seconds() << endl;
+    clog << "    Parsing and processing options: "
+                 << (args_parsed - start_time).seconds() << endl;
+    clog << "    Scanning for config files: "
+                 << (scanned_config_files - args_parsed).seconds() << endl;
+    clog << "    Loading (and compiling) the rough tokenizer: "
+                 << (roughtok_loaded - scanned_config_files).seconds() << endl;
+    clog << "    Preparing the regex properties: "
+                 << (regex_props_processed - roughtok_loaded).seconds() << endl;
+    clog << "    Preparing the list properties: "
+                 << (list_props_processed - regex_props_processed).seconds() << endl;
+    clog << "    Parsing the features file: "
+                 << (features_read - list_props_processed).seconds() << endl;
+    clog << "    Parsing the file lists: "
+                 << (file_lists_parsed - features_read).seconds() << endl;
+    clog << "    Parsing the training parameters: "
+                 << (training_params_parsed - file_lists_parsed).seconds() << endl;
+    clog << "    Constructing the pipeline: "
+                 << (pipeline_setup - training_params_parsed).seconds() << endl;
+    clog << "  Processing: " << (processing_done - pipeline_setup).seconds() << endl;
+    clog << "  Training: " << (training_done - processing_done).seconds() << endl;
+
+    clog << endl;
+
     clog << "Time spent in RoughTokenizer: " << rough_tokenizer_p->m_time_spent
       << endl;
     clog << "Time spent in FeatureExtractor: " << feature_extractor_p->m_time_spent
@@ -1000,4 +1051,7 @@ int main(int argc, char const **argv) {
       << classifier_p->m_time_spent_classifying << endl;
     clog << "Time spent in OutputFormatter: " << output_formatter_p->m_time_spent
       << endl;
+
+    clog << endl;
+    clog << endl;
 }
