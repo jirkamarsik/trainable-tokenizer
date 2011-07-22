@@ -738,7 +738,7 @@ int main(int argc, char const **argv) {
 
     if ((mode == TRAIN_MODE) || (mode == EVALUATE_MODE)) {
       
-      input_pipe_p = new pipes::pipe(pipes::pipe::limited_capacity);
+      input_pipe_p = new pipes::pipe(pipes::pipe::unlimited_capacity);
       input_pipe_to_p = new pipes::opipestream(*input_pipe_p);
       input_pipe_from_p = new pipes::ipipestream(*input_pipe_p);
 
@@ -751,7 +751,7 @@ int main(int argc, char const **argv) {
       rough_tokenizer_p->setup(input_pipe_from_p, "UTF-8");
       pipeline.add_filter(*rough_tokenizer_p);
 
-      annot_pipe_p = new pipes::pipe(pipes::pipe::limited_capacity);
+      annot_pipe_p = new pipes::pipe(pipes::pipe::unlimited_capacity);
       annot_pipe_to_p = new pipes::opipestream(*annot_pipe_p);
       annot_pipe_from_p = new pipes::ipipestream(*annot_pipe_p);
 
@@ -778,7 +778,7 @@ int main(int argc, char const **argv) {
 
       cutout_queue_p = new tbb::concurrent_bounded_queue<cutout_t>;
 
-      input_pipe_p = new pipes::pipe(pipes::pipe::limited_capacity);
+      input_pipe_p = new pipes::pipe(pipes::pipe::unlimited_capacity);
       input_pipe_to_p = new pipes::opipestream(*input_pipe_p);
       input_pipe_from_p = new pipes::ipipestream(*input_pipe_p);
 
@@ -812,7 +812,7 @@ int main(int argc, char const **argv) {
         pipeline.add_filter(*classifier_p);
       } //if ((mode == PREPARE_MODE) && (qa_stream_p == NULL))
 
-      output_pipe_p = new pipes::pipe(pipes::pipe::limited_capacity);
+      output_pipe_p = new pipes::pipe(pipes::pipe::unlimited_capacity);
       output_pipe_to_p = new pipes::opipestream(*output_pipe_p);
       output_pipe_from_p = new pipes::ipipestream(*output_pipe_p);
       
