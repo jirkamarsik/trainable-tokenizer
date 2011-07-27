@@ -1049,8 +1049,10 @@ int main(int argc, char const **argv) {
       << endl;
     clog << "  Time spent actually classifying in Classifier: "
       << classifier_p->m_time_spent_classifying << endl;
-    clog << "Time spent in OutputFormatter: " << output_formatter_p->m_time_spent
-      << endl;
+    if (mode == TOKENIZE_MODE || mode == PREPARE_MODE) {
+      clog << "Time spent in OutputFormatter: " << output_formatter_p->m_time_spent
+        << endl;
+    }
 
     clog << endl;
     clog << endl;
