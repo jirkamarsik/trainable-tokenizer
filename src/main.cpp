@@ -113,34 +113,27 @@ int main(int argc, char const **argv) {
         "Specifies the input and output encoding of the tokenizer. UTF-8 is "
         "used if none is specified.")
       ("file-list,l", po::value< vector<string> >(&sv_file_lists)->composing(),
-        "A list of input files to be processed. If mode is 'train' and this "
-        "setting is omitted, the file train.fl in scheme-path is used "
-        "instead. For the 'evaluate' mode, the file evaluate.fl is used as "
-        "default. If the paths are relative, they are evaluated with respect "
-        "to the location of the file list. More than 1 file list can be "
-        "specified.")
+        "A list of input files to be processed. If the paths are relative, "
+        "they are evaluated with respect to the location of the file list. "
+        "More than 1 file list can be specified.")
       ("heldout-file-list,h",
           po::value< vector<string> >(&sv_heldout_file_lists)
                            ->composing(),
-        "A list of input files to serve as heldout data during training...")
+        "A list of input files to serve as heldout data during training. "
+        "Applicable only in 'train' mode.")
       ("filename-regexp,r",
           po::value<string>(&s_filename_regexp)
-                           ->default_value("/(.*)\\.txt/\\1.tok/"),
-        "A regular expression/replacement string used to generate a set of "
-        "pairs of input/output files. Output files are written to in 'tokenize' "
-        "mode and are used as correct answers in 'train' and 'evaluate' modes. If "
-        "no such expression is given in 'train' and 'evaluate' modes, the "
-        "contents of files train.fnre and evaluate.fnre in the directory "
-        "scheme-path are used instead. If the mode is 'tokenize', the output of "
-        "tokenization is printed to the standard output.")
+                           ->default_value("/\\.txt/.tok/"),
+        "A regular expression/replacement string used to find partner files "
+        "for the input files. These are the output files when in 'prepare' "
+        "or 'tokenize' modes and annotated files when in 'train' or "
+        "'evaluate' modes.")
       ("preserve-paragraphs,p", po::bool_switch(&o_preserve_paragraphs),
-        "Replaces paragraph breaks with a blank line.")
+        "Preserve paragraph breaks as blank lines.")
       ("detokenize,d", po::bool_switch(&o_detokenize),
-        "Doesn't apply word splitting and joining decisions. The words found "
-        "in the input are preserved, whitespace is condensed into single "
-        "spaces or newlines in case of sentence break.")
+        "Preserve the tokenization (whitespace delimited) of the input.")
       ("preserve-segments,s", po::bool_switch(&o_preserve_segments),
-        "Assumes sentence boundaries are already specified by newlines.")
+        "Preserve the segmentation (line break delimited) of the input.")
       ("remove-xml,x", po::bool_switch(&o_remove_xml),
         "Removes XML markup from the input for the duration of the "
         "tokenization. If -X (--remove-xml-perm) is not set, the XML is "
@@ -157,11 +150,11 @@ int main(int argc, char const **argv) {
         "Expands entities found in the input and keeps the characters produced "
         "by the expansion in the output in their literal form.")
       ("questions,q", po::value<string>(&s_qa_file)->default_value("-"),
-        "Prints the questions presented to the maximum entropy classifier to "
-        "the specified file. In 'tokenize' mode, the classifier's answer is "
-        "present as well; in 'train' mode, it is the answer induced from the "
-        "data. In 'evaluate' mode, both the answer given by the classifier and "
-        "the correct answer are output. If no file is given in 'evaluate' mode, "
+        "Prints the contexts and outcomes from the maximum entropy classifier "
+        "to the specified file. In 'tokenize' mode, the classifier's answer is "
+        "present; in 'train' mode, it is the answer induced from the data. In "
+        "'evaluate' mode, both the answer given by the classifier and the "
+        "correct answer are output. If no file is given in 'evaluate' mode, "
         "the questions are output to the standard output instead.")
       ("verbose,v", po::bool_switch(&o_verbose),
         "If set, the Maxent toolkit will output its reports.")

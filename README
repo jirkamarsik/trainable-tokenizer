@@ -1,11 +1,11 @@
 trtok - a fast and trainable tokenizer for natural languages
 ------------------------------------------------------------
 
-  Trtok is a very universal performance oriented tokenizer for processing
+  Trtok is a very universal performance-oriented tokenizer for processing
 natural languages. It reads text and tries to correctly detect sentence
 boundaries and divide the text into tokens.
 
-  Trtok doesn't implement any specific heuristic to perform these tasks,
+  Trtok does not implement any specific heuristic to perform these tasks,
 instead it lets the user define rules for potential joining and splitting of
 words into tokens and sentences. The final decision whether to split or join
 words and whether to break sentences is left to a conditional probabilistic
@@ -31,22 +31,22 @@ his own features and specify which features are significant for what tokens.
   a) Rough tokenization rules
 
     Files with a .split file extension must contain pairs of whitespace
-    delimited regular expressions. Within every position in every word where
-    the prefix leading to the position matches the first expression and the
-    suffix following it matches the second expression the position is marked as
-    a potential token split and the word is split into two temporary rough
-    tokens. 
+    delimited regular expressions. When tokenizing the input, every position in
+    every word where the prefix leading to the position matches the first
+    expression and the suffix following it matches the second expression the
+    position is marked as a potential token split and the word is split into two
+    temporary rough tokens. 
 
-    Files with a .join extension are similar, but they describe two spans of
-    text which may be potentially joined into a single token if found separated
-    by whitespace.
+    Files with a .join extension have the same syntax, but they describe two
+    spans of text which may be potentially joined into a single token if found
+    separated by whitespace.
 
-    Files with a .begin and a .end extension list characters before which,
-    resp. after which, a potential sentence break is marked (and if this
+    Files with a .begin and a .end extension list characters before which, resp.
+    after which, a potential sentence break is to be marked (and if this
     potential sentence break occurs within a word, the word is split into two
-    temporary rough tokens). If the newline character is to be a potential
-    sentence beginning or ending character, an empty line is expected in either
-    a .begin file or a .end file.
+    rough tokens). If the newline character is to be a potential sentence
+    beginning or ending character, an empty line is expected in either a .begin
+    file or a .end file.
 
     The grammar of the regular expressions in .split and .join files is the one
     used by Quex and described in detail at
@@ -91,6 +91,18 @@ his own features and specify which features are significant for what tokens.
     appear on the right-hand side of a typical line instead of a simple
     property name and the offsets within its definition are omitted.
 
+    Apart from the user-defined properties from the .rep and .listp files, the
+    tokenizer defines the non-binary property "%length" whose value is the
+    length of the rough tokenizer and the meta-property "%Word" which generates
+    a property for each rough token type.
+
+      Example:
+        
+        -2..+2: %Word;
+        -5..5: uppercase, abbreviation, (starts_with_number ^ ends_with_period);
+        (0:fullstop ^ 1:initial)
+        
+
   d) Maxent training parameters
 
     More control over the process of training the probabilistic model can be
@@ -101,8 +113,8 @@ his own features and specify which features are significant for what tokens.
       event_cutoff=<int>                 All training events which occur less
             times than event_cutoff are ignored. Default 1.
 
-      n_iterations=<int>                 How many iterations will the iterative
-            method use. Default 15.
+      n_iterations=<int>                 How many iterations at most will the
+            iterative method use. Default 15.
 
       method_name=lbfgs|gis              Which of the two methods L-BFGS or GIS
             is to be used. L-BFGS is recommended. Default lbfgs.
@@ -120,8 +132,8 @@ his own features and specify which features are significant for what tokens.
 
   e) File lists and filename replacement regular expressions
 
-    Files [prepare|train|tokenize|evaluate].[fl|fnre] are for convenience only
-    and are described later.
+    Files [prepare|train|heldout|tokenize|evaluate].[fl|fnre] are for
+    convenience only and are described later.
  
 
 2) Running the tokenizer
@@ -135,23 +147,26 @@ his own features and specify which features are significant for what tokens.
     scheme to be used. The rest of the arguments are input files and options.
 
     Input files can be specified explicitly on the command line. More files can
-    be given using the -l (--file-list) option which takes a filepath and adds
-    every line of it as another input file.
+    be given using the -l (--file-list) option which takes a path to a file and
+    adds every line of it as another input file.
 
     When running in prepare mode or tokenize mode, an output file for each file
     has to be specified and when running in train mode or evaluate mode, a file
     with the annotated version has to be specified. These secondary files are
-    selected by taking the input filepath and replacing it using a filename
-    regular expression/replacement string. The filename regular
-    expression/replacement string is specified using the -r (--filename-regexp)
-    option. The strings look like replacement commands in sed, where the first
-    character can be any ASCII character and that character separates the
-    regular expression from the replacement string and also terminates the
-    entire string. Unlike sed, this special character cannot be present
-    anywhere else in the string (no escaping). The breed of regular expressions
-    used here is the one supported in PCRE, the replacement strings contain the
-    placeholders \0, \1... for the entire matched string, first captured
-    sequence...
+    selected by taking the input filepath and transforming it using a regular
+    expression/replacement string. The filename regular expression/replacement
+    string is specified using the -r (--filename-regexp) option. The strings
+    look like replacement commands in sed, where the first character can be any
+    ASCII character and that character separates the regular expression from
+    the replacement string and also terminates the entire string. Unlike sed,
+    this special character cannot be present anywhere else in the string (no
+    escaping). The breed of regular expressions used here is the one supported
+    by PCRE, the replacement strings contain the placeholders \0, \1... for the
+    entire matched string, first captured sequence...
+      
+      Example:
+
+        trtok train en/simple/brown -l data/brown/train.fl -r "|raw|txt|"
 
     If no input file or file lists were given, a default file list named
     <mode_name>.fl, which is part of the tokenization scheme, is used. If no
@@ -163,43 +178,42 @@ his own features and specify which features are significant for what tokens.
     If no input file or file lists were given and there are no default file
     lists defined by the tokenization scheme, then the tokenizer processes the
     standard input and writes to the standard output. This is however only
-    possible for the prepare and tokenize modes. The standard input/output
-    combo can also be explicitly selected by specifying the file "-" on the
-    command line.
+    possible for the "prepare" and "tokenize" modes. The standard input/output
+    combo can also be explicitly selected by specifying the input file "-" on
+    the command line.
 
   b) Different modes of execution
 
-    In prepare mode, the tokenizer reads the input, splits into rough tokens
+    In "prepare" mode, the tokenizer reads the input, splits into rough tokens
     and then outputs it with all possible splits and sentence breaks performed.
     This format might be handy for manual annotators who then only have to join
     together parts of tokens and sentences.
 
-    In train mode, the tokenizer reads both the input and its annotated
+    In "train" mode, the tokenizer reads both the input and its annotated
     version. It uses the annotated data to get pairs of questions (values of
     features in a given context surrounding a decision point) and answers
     (whether the decision point is to become a joining of tokens, a splitting
     of tokens or a sentence break). These pairs are then used to train the
     probabilistic model and store it in a file under the "build" directory.
 
-    In tokenize mode, the tokenizer relies on the presence of an already
+    In "tokenize" mode, the tokenizer relies on the presence of an already
     trained model and uses it to classify every decision point in the input
     file and output the tokenized and segmented text.
 
-    In evaluate mode, the tokenizer reads both the input and its annotation as
-    in train mode, but now it also queries the trained model for an opinion and
-    compares it with the one found in the annotated data. The tokenizer outputs
-    a log of every question and both the guessed and correct answers for later
-    analysis. The "analyze" script provided with trtok will let you read this
-    output and determine the accuracy of your system.
+    In "evaluate" mode, the tokenizer reads both the input and its annotation
+    as in "train" mode, but now it also queries the trained model for an
+    opinion and compares it with the one found in the annotated data. The
+    tokenizer outputs a log of every context and both the predicted and correct
+    outcomes for later analysis. The "analyze" script provided with trtok will
+    let you read this output and determine the accuracy of your system.
 
   c) Different options
 
     If you launch trtok with no command line arguments, you will get a summary
     of all the supported command line options and their meaning. These include
     options for setting the encoding of the input and output files, options for
-    controlling the output (preserving the tokens, segments or paragraphs of
-    the input file), the preprocessing of input (if entities are to be expanded
-    for the duration of the tokenization and if they are to be kept expanded in
-    the output; if XML should be hidden from tokenization), options for logging
-    the questions and answers to a third file and an option regarding the
-    verbosity of the tokenizer's output.
+    controlling the output (preserving the original tokenization, segmentation
+    or paragraph division), the preprocessing of input (if entities are to be
+    expanded for the duration of the tokenization and if they are to be kept
+    expanded in the output; if XML should be hidden from tokenization), options
+    for logging the contexts and outcomes to a third file and others.
