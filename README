@@ -153,7 +153,7 @@ his own features and specify which features are significant for what tokens.
     When running in prepare mode or tokenize mode, an output file for each file
     has to be specified and when running in train mode or evaluate mode, a file
     with the annotated version has to be specified. These secondary files are
-    selected by taking the input filepath and transforming it using a regular
+    selected by taking the input file's path and transforming it using a regular
     expression/replacement string. The filename regular expression/replacement
     string is specified using the -r (--filename-regexp) option. The strings
     look like replacement commands in sed, where the first character can be any
