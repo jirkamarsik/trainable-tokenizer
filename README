@@ -33,9 +33,9 @@ his own features and specify which features are significant for what tokens.
     Files with a .split file extension must contain pairs of whitespace
     delimited regular expressions. When tokenizing the input, every position in
     every word where the prefix leading to the position matches the first
-    expression and the suffix following it matches the second expression the
-    position is marked as a potential token split and the word is split into two
-    temporary rough tokens. 
+    expression and the suffix following it matches the second expression is
+    marked as a potential token split and the word is split into two temporary
+    rough tokens. 
 
     Files with a .join extension have the same syntax, but they describe two
     spans of text which may be potentially joined into a single token if found
@@ -62,6 +62,7 @@ his own features and specify which features are significant for what tokens.
     marked as having this property if it can be matched to the regular
     expression.
 
+    Files with a .listp extension define properties using lists of token types.
     If a rough token's text is exactly the same as a line from a .listp file,
     then that rough token is marked as having the property defined by that
     .listp file.
@@ -177,17 +178,17 @@ his own features and specify which features are significant for what tokens.
 
     If no input file or file lists were given and there are no default file
     lists defined by the tokenization scheme, then the tokenizer processes the
-    standard input and writes to the standard output. This is however only
+    standard input and writes to the standard output. This is, however, only
     possible for the "prepare" and "tokenize" modes. The standard input/output
     combo can also be explicitly selected by specifying the input file "-" on
     the command line.
 
   b) Different modes of execution
 
-    In "prepare" mode, the tokenizer reads the input, splits into rough tokens
-    and then outputs it with all possible splits and sentence breaks performed.
-    This format might be handy for manual annotators who then only have to join
-    together parts of tokens and sentences.
+    In "prepare" mode, the tokenizer reads the input, splits it into rough
+    tokens and then outputs it with all possible splits and sentence breaks
+    performed. This format might be handy for manual annotators who then only
+    have to join together parts of tokens and sentences.
 
     In "train" mode, the tokenizer reads both the input and its annotated
     version. It uses the annotated data to get pairs of questions (values of

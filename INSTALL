@@ -9,8 +9,7 @@ You will need
   Debian packages: g++, make, cmake, cmake-curses-gui
 
 * Python
-  Needed to run the analyze script. The script was aimed at Python 3.2, but
-  was later changed to support Python 2.6 as well.
+  Needed to run the analyze script.
   Debian packages: python3 or python
 
 * Maxent Modeling Toolkit for Python and C++ (Le Zhang)
@@ -44,9 +43,8 @@ You will need
   Debian packages: libltdl-dev
 
 * PCRE (Perl Compliant Regular Expression) (with headers)
-  The library built with the C++ wrapper, support for UTF-8 and support for
-  Unicode characters sets is needed. The source can be downloaded at
-  http://pcre.org.
+  The library built with the C++ wrapper and support for UTF-8 is needed. The
+  source can be downloaded at http://pcre.org.
   Debian packages: libpcre3, libpcre3-dev, libpcrecpp0
 
 * Boost libraries (version >= 1.46, with headers)
@@ -116,13 +114,12 @@ the CMake cache. For that I recommend ccmake, where you simply run
 from the build directory and you can setup all the parameters in a nice way.
 Besides helping CMake find the required libraries, you can use ccmake to setup
 the installation directory INSTALL_DIR, whether iconv or ICU is used for
-character decoding and encoding (USE_ICONV, USE_ICU), the path to Quex (QUEX),
-the build type (CMAKE_BUILD_TYPE=Debug, Release...) and tune several program
-parameters (the most interesting being WORK_UNIT_COUNT, which sets the number
-of threads running in the pipeline at the same time, which should be set to a
-number correlating with the number of CPUs in you machine, and CHUNK_SIZE,
-which sets the size of work units being passed through the pipeline and lets
-you optimize the overhead costs by setting it larger).
+character decoding and encoding (USE_ICONV, USE_ICU), whether static libraries
+should be preferred (PREFER_STATIC_LIBRARIES), the path to Quex (QUEX), the
+build type (CMAKE_BUILD_TYPE=Debug, Release...) and tune several program
+parameters (the most interesting being WORK_UNIT_COUNT, which sets the number of
+threads running in the pipeline at the same time and CHUNK_SIZE, which sets the
+size of work units being passed through the pipeline).
 
 After setting the parameters, press 'c' and then 'g' to configure the cache and
 generate the Makefiles (or other files for your build system of choice).
