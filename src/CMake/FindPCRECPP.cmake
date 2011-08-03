@@ -77,5 +77,6 @@ find_library (PCRECPP_LIBRARY NAMES pcrecpp
 # Set the PCRECPP_PROCESS_ variables and call libfind_process to wrap it
 # all up and report
 set (PCRECPP_PROCESS_INCLUDES PCRECPP_INCLUDE_DIR)
-set (PCRECPP_PROCESS_LIBS PCRE_LIBRARY PCRECPP_LIBRARY)
+# When linking with PCRE C++ statically, pcrecpp must go before pcre.
+set (PCRECPP_PROCESS_LIBS PCRECPP_LIBRARY PCRE_LIBRARY)
 libfind_process (PCRECPP pcrecpp.h)
