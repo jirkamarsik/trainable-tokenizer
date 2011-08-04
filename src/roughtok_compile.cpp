@@ -600,7 +600,9 @@ bool compile_rough_lexer(vector<fs::path> const &split_files,
         int return_code = system((cmake_command + " .").c_str());
         if (return_code != EXIT_SUCCESS) {
             throw config_exception("Error: CMake exited with an error code "
-                "when compiling the rough tokenizer.");
+                "when compiling the rough tokenizer. If it is the case that "
+                "CMake is not even in your PATH, you can set the environment "
+                "variable CMAKE_COMMAND to point to your CMake executable.");
         }
 
         // CMake also writes for us a file on whose single line is a command
