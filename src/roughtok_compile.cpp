@@ -13,7 +13,6 @@
 typedef boost::uint32_t uint32_t;
 
 #include "roughtok_compile.hpp"
-#include "configuration.hpp"
 #include "config_exception.hpp"
 #include "utils.hpp"
 
@@ -594,7 +593,11 @@ bool compile_rough_lexer(vector<fs::path> const &split_files,
                       fs::copy_option::overwrite_if_exists);
 
         // and call CMake.
-        int return_code = system(CMAKE_COMMAND " .");
+        char *e_cmake_command = getenv("CMAKE_COMMAND");
+        string cmake_command = e_cmake_command != NULL
+                                  ? e_cmake_command : "cmake";
+
+        int return_code = system((cmake_command + " .").c_str());
         if (return_code != EXIT_SUCCESS) {
             throw config_exception("Error: CMake exited with an error code "
                 "when compiling the rough tokenizer.");
