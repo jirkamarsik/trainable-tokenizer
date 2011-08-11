@@ -48,9 +48,9 @@ typedef boost::uint32_t uint32_t;
         std::string entity = unicode_to_utf8(token_p->get_text());\
         uint32_t expanded_cp;\
         bool good_expand = expand_entity(entity, expanded_cp);\
-        std::string expanded_utf8 =\
-            unicode_to_utf8(std::basic_string<uint32_t>(1, expanded_cp));\
         if (good_expand) {\
+          std::string expanded_utf8 =\
+              unicode_to_utf8(std::basic_string<uint32_t>(1, expanded_cp));\
           if ((m_cutout_queue_p != NULL) && !is_whitespace(expanded_cp)\
                       && !m_expand_entities_perm) {\
             /* We only report the entity for replacement if
@@ -65,10 +65,11 @@ typedef boost::uint32_t uint32_t;
           } else {\
             *m_output_stream_p << expanded_utf8;\
           }\
+          position += is_whitespace(expanded_cp) ? 0 : 1;\
         } else {\
             *m_output_stream_p << entity;\
+            position += token_p->get_text().size();\
         }\
-        position += is_whitespace(expanded_cp) ? 0 : 1;\
       } else if (token_p->type_id() == token_prefix##XML) {\
         /* We found some XML which, depending on m_remove_xml_perm and whether
          * we were given a cutout queue, we stash away and give to the output
