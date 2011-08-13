@@ -913,6 +913,9 @@ int main(int argc, char const **argv) {
 
         // Open the files,...
         fs::path output_file_path(other_file);
+        if (!fs::is_directory(output_file_path.parent_path())) {
+          fs::create_directories(output_file_path.parent_path());
+        }
 
         istream *input_stream_p = (*input_file == "-") ? &cin
                                        : new fs::ifstream(input_file_path);
