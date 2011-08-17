@@ -21,12 +21,15 @@ public:
                     /* whether tokenization decisions (JOIN, SPLIT) are to
                        be ignored */
                     bool detokenize,
-                    /* whether segmentation decisions (BREAK_SENTENCE) are to
-                       be ignored */
-                    bool preserve_segments,
-                    /* whethre paragraph breaks are to be preserved in the
-                       output */
-                    bool preserve_paragraphs,
+                    /* whether newlines in the input should always create
+                       sentence boundaries */
+                    bool honour_single_newline,
+                    /* whether spans of more than 1 newline are to be preserved
+                       in the output*/
+                    bool honour_more_newlines,
+                    /* whether the tokenizer should be forbidden from further
+                       segmenting the text*/
+                    bool never_add_newline,
                     /* a queue of cutout performed by the TextCleaner which
                        are to be undone by reinserting or replacing
                        characters */
@@ -34,8 +37,9 @@ public:
             tbb::filter(tbb::filter::serial_in_order),
             m_output_stream_p(output_stream_p),
             m_detokenize(detokenize),
-            m_preserve_segments(preserve_segments),
-            m_preserve_paragraphs(preserve_paragraphs),
+            m_honour_single_newline(honour_single_newline),
+            m_honour_more_newlines(honour_more_newlines),
+            m_never_add_newline(never_add_newline),
             m_cutout_queue_p(cutout_queue_p)
     {
         reset();
@@ -55,7 +59,8 @@ private:
     // Configuration
     pipes::opipestream *m_output_stream_p;
     tbb::concurrent_bounded_queue<cutout_t> *m_cutout_queue_p;
-    bool m_detokenize, m_preserve_segments, m_preserve_paragraphs;
+    bool m_detokenize, m_honour_single_newline, m_honour_more_newlines,
+         m_never_add_newline;
 
     // State
     long m_position;

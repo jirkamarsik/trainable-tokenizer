@@ -71,20 +71,22 @@ void* OutputFormatter::operator() (void *input_p) {
     }
 
     std::string token_sep = "";
-    // Check if we should insert a paragraph break...
-    if (m_preserve_paragraphs && (token->n_newlines >= 2)) {
-      token_sep = "\n\n";
+    // Check whether any of the options force a sentence boundary...
+    if (m_honour_more_newlines && (token->n_newlines >= 2)) {
+      token_sep = std::string(token->n_newlines, '\n');
+    } else if (m_honour_single_newline && (token->n_newlines >= 1)) {
+      token_sep = "\n";
+    } else if (m_never_add_newline && (token->n_newlines <= 0)) {
+      token_sep = "";
+    // ...If not , rely on the classifier's decision.
+    } else if ((token->decision_flags & DO_BREAK_SENTENCE_FLAG)
+               || (token->n_newlines >= 2)) {
+      token_sep = "\n";
+    } else {
+      token_sep = "";
     }
-    // or a simple line break...
-    if (token_sep == "") {
-      if (m_preserve_segments) {
-        if (token->n_newlines >= 1)
-          token_sep = "\n";
-      } else if (token->decision_flags & DO_BREAK_SENTENCE_FLAG) {
-        token_sep = "\n";
-      }
-    }
-    // or only a space.
+    // Check for a token boundary if the position wasn't marked
+    // as a sentence boundary.
     if (token_sep == "") {
       if (m_detokenize) {
         if (token->n_newlines >= 0)

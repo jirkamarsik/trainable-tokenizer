@@ -99,7 +99,8 @@ int main(int argc, char const **argv) {
     vector<string> sv_file_lists, sv_heldout_file_lists;
     string s_filename_regexp;
 
-    bool o_preserve_paragraphs, o_detokenize, o_preserve_segments;
+    bool o_detokenize, o_honour_single_newline, o_honour_more_newlines,
+         o_never_add_newline;
     bool o_remove_xml, o_remove_xml_perm;
     bool o_expand_entities, o_expand_entities_perm;
     bool o_verbose;
@@ -128,12 +129,14 @@ int main(int argc, char const **argv) {
         "for the input files. These are the output files when in 'prepare' "
         "or 'tokenize' modes and annotated files when in 'train' or "
         "'evaluate' modes.")
-      ("preserve-paragraphs,p", po::bool_switch(&o_preserve_paragraphs),
-        "Preserve paragraph breaks as blank lines.")
       ("detokenize,d", po::bool_switch(&o_detokenize),
         "Preserve the tokenization (whitespace delimited) of the input.")
-      ("preserve-segments,s", po::bool_switch(&o_preserve_segments),
-        "Preserve the segmentation (line break delimited) of the input.")
+      ("honour-single-newline,s", po::bool_switch(&o_honour_single_newline),
+       "All newlines in the input are interpreted as sentence boundaries.")
+      ("honour-more-newlines,m", po::bool_switch(&o_honour_more_newlines),
+       "Spans of whitespace containing more than 1 newline will be preserved.")
+      ("never-add-newline,n", po::bool_switch(&o_never_add_newline),
+       "Prevent trtok from segmenting the text any further.")
       ("remove-xml,x", po::bool_switch(&o_remove_xml),
         "Removes XML markup from the input for the duration of the "
         "tokenization. If -X (--remove-xml-perm) is not set, the XML is "
@@ -809,8 +812,9 @@ int main(int argc, char const **argv) {
       output_pipe_from_p = new pipes::ipipestream(*output_pipe_p);
       
       output_formatter_p = new OutputFormatter(output_pipe_to_p, o_detokenize,
-                                               o_preserve_segments,
-                                               o_preserve_paragraphs,
+                                               o_honour_single_newline,
+                                               o_honour_more_newlines,
+                                               o_never_add_newline,
                                                cutout_queue_p);
       pipeline.add_filter(*output_formatter_p);
 
