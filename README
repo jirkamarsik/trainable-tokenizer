@@ -30,30 +30,27 @@ his own features and specify which features are significant for what tokens.
 
   a) Rough tokenization rules
 
-    Files with a .split file extension must contain pairs of whitespace
-    delimited regular expressions. When tokenizing the input, every position in
-    every word where the prefix leading to the position matches the first
-    expression and the suffix following it matches the second expression is
-    marked as a potential token split and the word is split into two temporary
-    rough tokens. 
+    The tokenizer identifies all potential token and sentence boundaries within
+    the text and uses them and the whitespace to split the text into short
+    segments called rough tokens. The ambiguous boundaries are placed according
+    to the tokenization scheme. Files with the .split extension define positions
+    where a word may be broken into two tokens (called a MAY_SPLIT). Files with
+    the .join extension define positions where two words may be joined into a
+    single token (MAY_JOIN). Finally, files with the .break extension define
+    positions at which there might be a sentence break (MAY_BREAK_SENTENCE).
 
-    Files with a .join extension have the same syntax, but they describe two
-    spans of text which may be potentially joined into a single token if found
-    separated by whitespace.
+    All of the above-named files must contain lines of pairs of
+    whitespace-delimited regular expressions. If the text leading to a position
+    and the text following it match the two paired regular expressions
+    respectively, the ambiguous boundary (MAY_SPLIT for .split files, MAY_JOIN
+    for .join files or MAY_BREAK_SENTENCE for .break files) is placed at that
+    position.
 
-    Files with a .begin and a .end extension list characters before which, resp.
-    after which, a potential sentence break is to be marked (and if this
-    potential sentence break occurs within a word, the word is split into two
-    rough tokens). If the newline character is to be a potential sentence
-    beginning or ending character, an empty line is expected in either a .begin
-    file or a .end file.
-
-    The grammar of the regular expressions in .split and .join files is the one
-    used by Quex and described in detail at
+    The grammar of the regular expressions in these files is the one used by
+    Quex and described in detail at
     http://quex.sourceforge.net/doc/html/usage/patterns/context-free.html.
 
-    The .split and .join files may contain comments which are lines that begin
-    with the # symbol.
+    The files may contain comments which are lines that begin with the # symbol.
 
   b) User-defined properties
 

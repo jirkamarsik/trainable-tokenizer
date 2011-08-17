@@ -295,15 +295,14 @@ int main(int argc, char const **argv) {
      * look for special filenames (train.fnre etc...).
      * If case folding is implented in the future, it might be feasible to
      * make the extensions completely case-insensitive. */
-    vector<fs::path> split_files, join_files, begin_files, end_files,
+    vector<fs::path> split_files, join_files, break_files,
                      listp_files, rep_files;
     fs::path features_file, maxentparams_file;
     fs::path default_file_list, default_heldout_file_list, default_fnre_file;
     boost::unordered_map< string, vector<fs::path>* > file_vectors;
     file_vectors[".split"] = &split_files;
     file_vectors[".join"] = &join_files;
-    file_vectors[".begin"] = &begin_files;
-    file_vectors[".end"] = &end_files;
+    file_vectors[".break"] = &break_files;
     file_vectors[".listp"] = &listp_files;
     file_vectors[".rep"] = &rep_files;
 
@@ -345,7 +344,7 @@ int main(int argc, char const **argv) {
 
     // COMPILING AND LOADING THE ROUGH TOKENIZER
     try {
-      compile_rough_lexer(split_files, join_files, begin_files, end_files,
+      compile_rough_lexer(split_files, join_files, break_files,
                           build_path);
     } catch (config_exception const &exc) {
       cerr << exc.what() << endl;

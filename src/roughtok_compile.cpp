@@ -108,37 +108,6 @@ void read_contexts(vector<fs::path> const &files,
 }
 
 
-/* Reads UTF-8 characters from the specified files and converts them to
- * unicode code points. If the files contain a blank line, the \r\n code
- * points are stored as well. If these two characters are somehow present
- * elsewhere in the file, they are ignored to prevent accidentally including
- * them in the set. */
-void read_character_set(vector<fs::path> const &charset_files,
-                        vector<uint32_t> &charset) {
-
-    for (vector<fs::path>::const_iterator file = charset_files.begin();
-         file != charset_files.end(); file++) {
-
-        fs::ifstream file_stream(*file);
-
-        string line;
-        while (getline(file_stream, line)) {
-
-            if (line.length() == 0) {
-                // An empty line stands for the newline character.
-                charset.push_back(0x0A);
-                charset.push_back(0x0D);
-            }
-
-            basic_string<uint32_t> codepoints = utf8_to_unicode(line);
-            remove_copy_if(codepoints.begin(), codepoints.end(),
-                           back_inserter(charset), is_newline);
-        }
-
-        file_stream.close();
-    }
-}
-
 /* A helper function for the following function. */
 string mode_name(bool entity_mode,
                  bool may_split,
@@ -164,10 +133,9 @@ void print_mode(ostream &quex_file,
                 bool may_split,
                 bool may_join,
                 bool may_break_sentence,
-                bool have_sentence_begins,
-                bool have_sentence_ends, 
                 int n_split_contexts,
                 int n_join_contexts,
+                int n_break_sentence_contexts,
                 string start_mode) {
 
     quex_file << "mode "
@@ -193,8 +161,7 @@ void print_mode(ostream &quex_file,
     if (may_join) {
       for (int i = 0; i < n_join_contexts; i++) {
         quex_file <<
-        "  {JOIN_PREFIX_" << i+1 << "}/"
-            "\\P{White_Space}+{JOIN_SUFFIX_" << i+1 << "}/\n"
+        "  {JOIN_PREFIX_" << i+1 << "}/{JOIN_SUFFIX_" << i+1 << "}/\n"
         "        {\n"
         "          flush_accumulator();\n"
         "          self_send(QUEX_ROUGH_MAY_JOIN);\n"
@@ -208,22 +175,10 @@ void print_mode(ostream &quex_file,
     }
 
     if (may_break_sentence) {
-      if (have_sentence_begins) {
+      for (int i = 0; i < n_break_sentence_contexts; i++) {
         quex_file <<
-        "  {SENTENCE_BEGINNING_MARKER}\n"
-        "        {\n"
-        "          flush_accumulator();\n"
-        "          self_send(QUEX_ROUGH_MAY_BREAK_SENTENCE);\n"
-        "          self.undo();\n"
-        "          self << "
-              << mode_name(entity_mode, may_split, may_join, false)
-              << ";\n"
-        "        }\n"
-        "\n";
-      }
-      if (have_sentence_ends) {
-        quex_file <<
-        "  {SENTENCE_ENDING_MARKER}/.|\\n/\n"
+        "  {BREAK_SENTENCE_PREFIX_" << i+1 << "}/"
+          "{BREAK_SENTENCE_SUFFIX_" << i+1 << "}/\n"
         "        {\n"
         "          flush_accumulator();\n"
         "          self_send(QUEX_ROUGH_MAY_BREAK_SENTENCE);\n"
@@ -281,10 +236,9 @@ void print_mode(ostream &quex_file,
         "        {\n"
         "          if (self.ws_newlines == -1) {\n"
         "            flush_accumulator();\n"
-        "            self.ws_newlines = 1;\n"
-        "          } else {\n"
-        "            self.ws_newlines++;\n"
+        "            self.ws_newlines = 0;\n"
         "          }\n"
+        "          self.ws_newlines++;\n"
         "          self << " << start_mode << ";\n"
         "        }\n"
         "\n"
@@ -292,10 +246,9 @@ void print_mode(ostream &quex_file,
         "        {\n"
         "          if (self.ws_newlines == -1) {\n"
         "            flush_accumulator();\n"
-        "            self.ws_newlines = 1;\n"
-        "          } else {\n"
-        "            self.ws_newlines++;\n"
+        "            self.ws_newlines = 0;\n"
         "          }\n"
+        "          self.ws_newlines++;\n"
         "          self << " << start_mode << ";\n"
         "        }\n"
         "\n"
@@ -325,8 +278,7 @@ void print_mode(ostream &quex_file,
 
 bool compile_rough_lexer(vector<fs::path> const &split_files,
                          vector<fs::path> const &join_files,
-                         vector<fs::path> const &begin_files,
-                         vector<fs::path> const &end_files,
+                         vector<fs::path> const &break_files,
                          fs::path const &build_path) {
 
     fs::path original_path = fs::current_path();
@@ -354,11 +306,7 @@ bool compile_rough_lexer(vector<fs::path> const &split_files,
           file_set_changed = true;
       }
       if (!file_set_changed
-        && !check_file_lists_match(begin_files, file_list_istream)) {
-          file_set_changed = true;
-      }
-      if (!file_set_changed
-        && !check_file_lists_match(end_files, file_list_istream)) {
+        && !check_file_lists_match(break_files, file_list_istream)) {
           file_set_changed = true;
       }
       if (!file_set_changed) {
@@ -383,14 +331,12 @@ bool compile_rough_lexer(vector<fs::path> const &split_files,
           time_t compiled_time = fs::last_write_time(file_list_path);
 
           vector<fs::path>::const_iterator i = split_files.begin();
-          while (!newer_filestamps && (i != end_files.end())) {
+          while (!newer_filestamps && (i != break_files.end())) {
               if (i == split_files.end())
                   i = join_files.begin();
               if (i == join_files.end())
-                  i = begin_files.begin();
-              if (i == begin_files.end())
-                  i = end_files.begin();
-              if (i == end_files.end()) {
+                  i = break_files.begin();
+              if (i == break_files.end()) {
                   break;
               }
               if (fs::last_write_time(*i) >= compiled_time) {
@@ -416,14 +362,12 @@ bool compile_rough_lexer(vector<fs::path> const &split_files,
                  << endl;
         }
 
-        vector<context_t> split_contexts, join_contexts;
-        vector<uint32_t> begin_chars, end_chars;
+        vector<context_t> split_contexts, join_contexts,
+                          break_sentence_contexts;
 
         read_contexts(split_files, split_contexts);
         read_contexts(join_files, join_contexts);
-
-        read_character_set(begin_files, begin_chars);
-        read_character_set(end_files, end_chars);
+        read_contexts(break_files, break_sentence_contexts);
 
 
         // GENERATING THE QUEX FILE
@@ -432,9 +376,7 @@ bool compile_rough_lexer(vector<fs::path> const &split_files,
 
         bool have_splits = split_contexts.size() > 0;
         bool have_joins = join_contexts.size() > 0;
-        bool have_sentence_begins = begin_chars.size() > 0;
-        bool have_sentence_ends = end_chars.size() > 0;
-        bool have_sentence_breaks = have_sentence_begins || have_sentence_ends;
+        bool have_sentence_breaks = break_sentence_contexts.size() > 0;
 
         string start_mode =
             mode_name(false, have_splits, have_joins, have_sentence_breaks);
@@ -460,26 +402,12 @@ bool compile_rough_lexer(vector<fs::path> const &split_files,
                     << join_contexts[i].second << "\n";
         }
 
-        if (have_sentence_begins) {
-          quex_file << hex;
-          quex_file << "  SENTENCE_BEGINNING_MARKER [";
-          for (vector<uint32_t>::const_iterator cp = begin_chars.begin();
-               cp != begin_chars.end(); cp++) {
-            quex_file << "\\U" << *cp;
-          }
-          quex_file << "]\n";
-          quex_file << dec;
-        }
-
-        if (have_sentence_ends) {
-          quex_file << std::hex;
-          quex_file << "  SENTENCE_ENDING_MARKER [";
-          for (vector<uint32_t>::const_iterator cp = end_chars.begin();
-               cp != end_chars.end(); cp++) {
-            quex_file << "\\U" << *cp;
-          }
-          quex_file << "]\n";
-          quex_file << std::dec;
+        for (std::vector<context_t>::size_type i = 0;
+             i != break_sentence_contexts.size(); i++) {
+          quex_file << "  BREAK_SENTENCE_PREFIX_" << i+1 << " "
+                    << break_sentence_contexts[i].first << "\n";
+          quex_file << "  BREAK_SENTENCE_SUFFIX_" << i+1 << " "
+                    << break_sentence_contexts[i].second << "\n";
         }
 
         quex_file << 
@@ -540,16 +468,16 @@ bool compile_rough_lexer(vector<fs::path> const &split_files,
         "\n";
 
         bool bools[2] = {false, true};
-        for (int entity = 0; entity < 2; entity++)
-          for (int split = 0; split < (have_splits ? 2 : 1); split++)
-            for (int join = 0; join < (have_joins ? 2 : 1); join++)
+        for (int entity = 0; entity <= 1; entity++)
+          for (int split = 0; split <= (have_splits ? 1 : 0); split++)
+            for (int join = 0; join <= (have_joins ? 1 : 0); join++)
               for (int sentence_break = 0;
-                   sentence_break < (have_sentence_breaks ? 2 : 1);
+                   sentence_break <= (have_sentence_breaks ? 1 : 0);
                    sentence_break ++) {
                 print_mode(quex_file, bools[entity], bools[split], bools[join],
-                           bools[sentence_break], have_sentence_begins,
-                           have_sentence_ends, split_contexts.size(),
-                           join_contexts.size(), start_mode);
+                           bools[sentence_break], split_contexts.size(),
+                           join_contexts.size(), break_sentence_contexts.size(),
+                           start_mode);
                 quex_file << endl;
               }
 
@@ -635,11 +563,7 @@ bool compile_rough_lexer(vector<fs::path> const &split_files,
                 file_list_ostream << i->generic_string() << std::endl;
             }
     
-            for (iter i = begin_files.begin(); i != begin_files.end(); i++) {
-                file_list_ostream << i->generic_string() << std::endl;
-            }
-    
-            for (iter i = end_files.begin(); i != end_files.end(); i++) {
+            for (iter i = break_files.begin(); i != break_files.end(); i++) {
                 file_list_ostream << i->generic_string() << std::endl;
             }
     
