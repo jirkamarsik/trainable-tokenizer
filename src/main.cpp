@@ -828,146 +828,153 @@ int main(int argc, char const **argv) {
     for (vector<string>::const_iterator input_file = input_files.begin();
          input_file != input_files.end(); input_file++) {
       
-      // If we have processed all the regular input files and there are more
-      // files to process, it must be the heldout data and so we notify the
-      // Classifier.
-      if (input_file - input_files.begin() == num_nonheldout_files) {
-        classifier_p->switch_to_heldout_data();
-      }
+      clog << "trtok: Processing file " << *input_file << endl;
 
-      fs::path input_file_path(*input_file);
-      string other_file(*input_file);
-
-      if (*input_file != "-") {
-        // We are working with files
-        if (!fs::exists(input_file_path)) {
-          cerr << *input_file << ": Warning: File not found, skipping."
-               << endl;
-          continue;
-        }
-        
-        bool fnre_success = fnre_regexp.Replace(fnre_replace, &other_file);
-
-        if (!fnre_success) {
-          cerr << *input_file << ": Warning: Failed to apply regex to find "
-              "partner file, skipping. Possible causes include the regular "
-              "expression failing to match and the replacement string using "
-              "illegal backreferences." << endl;
-          continue;
-        }
-      }
-      
-      if ((mode == TRAIN_MODE) || (mode == EVALUATE_MODE)) {
-        
-        if (*input_file == "-") {
-          END_WITH_ERROR("trtok", s_mode << " mode cannot act on "
-              "the standard input alone.");
+      try {
+        // If we have processed all the regular input files and there are more
+        // files to process, it must be the heldout data and so we notify the
+        // Classifier.
+        if (input_file - input_files.begin() == num_nonheldout_files) {
+          classifier_p->switch_to_heldout_data();
         }
 
-        // Check for the annotated file,...
-        fs::path annotated_file_path(other_file);
-        if (!fs::exists(annotated_file_path)) {
-          cerr << other_file << ": Warning: Annotated file does not exist, "
-              "skipping." << endl;
-          continue;
-        }
+        fs::path input_file_path(*input_file);
+        string other_file(*input_file);
 
-        // open the files,...
-        fs::ifstream input_stream(input_file_path);
-        fs::ifstream annotated_stream(annotated_file_path);
-
-        // restore the pipes,...
-        /* The sender closes his pipestream to signal an EOF to the receiver.
-           These pipestreams need to reopened for subsequent iterations.
-           All pipestreams must however disconnect from the pipe before
-           we can use it again. */
-        if (!input_pipe_to_p->is_open()) {
-          input_pipe_from_p->close();
-          input_pipe_to_p->open(*input_pipe_p);
-          input_pipe_from_p->open(*input_pipe_p);
-        }
-        if (!annot_pipe_to_p->is_open()) {
-          annot_pipe_from_p->close();
-          annot_pipe_to_p->open(*annot_pipe_p);
-          annot_pipe_from_p->open(*annot_pipe_p);
-        }
-
-        // clean out and setup the pipeline,...
-        input_cleaner_p->setup(&input_stream);
-        rough_tokenizer_p->reset();
-        annot_cleaner_p->setup(&annotated_stream);
-        classifier_p->setup(input_file_path.native(),
-                            annotated_file_path.native());
-
-        // run it...
-        boost::thread input_thread(&TextCleaner::do_work,
-                                   boost::ref(*input_cleaner_p));
-        boost::thread annot_thread(&TextCleaner::do_work,
-                                   boost::ref(*annot_cleaner_p));
-        pipeline.run(WORK_UNIT_COUNT);
-        input_thread.join();
-        annot_thread.join();
-      
-        // and close the files.
-        input_stream.close();
-        annotated_stream.close();
-
-      } else if ((mode == PREPARE_MODE) || (mode == TOKENIZE_MODE)) {
-
-        // Open the files,...
-        fs::path output_file_path(other_file);
-        if (!fs::is_directory(output_file_path.parent_path())) {
-          fs::create_directories(output_file_path.parent_path());
-        }
-
-        istream *input_stream_p = (*input_file == "-") ? &cin
-                                       : new fs::ifstream(input_file_path);
-        ostream *output_stream_p = (*input_file == "-") ? &cout
-                                        : new fs::ofstream(output_file_path);
-
-        // restore the pipes,...
-        if (!input_pipe_to_p->is_open()) {
-          input_pipe_from_p->close();
-          input_pipe_to_p->open(*input_pipe_p);
-          input_pipe_from_p->open(*input_pipe_p);
-        }
-        if (!output_pipe_to_p->is_open()) {
-          output_pipe_from_p->close();
-          output_pipe_to_p->open(*output_pipe_p);
-          output_pipe_from_p->open(*output_pipe_p);
-        }
-
-        // setup the pipeline,...
-        input_cleaner_p->setup(input_stream_p);
-        rough_tokenizer_p->reset();
-        if (simple_preparer_p != NULL) {
-          simple_preparer_p->reset();
-        } else {
-          feature_extractor_p->reset();
-          classifier_p->setup(input_file_path.native());
-        }
-        output_formatter_p->reset();
-        encoder_p->setup(output_stream_p);
-
-        // run it...
-        boost::thread input_thread(&TextCleaner::do_work,
-                                   boost::ref(*input_cleaner_p));
-        boost::thread output_thread(&Encoder::do_work,
-                                    boost::ref(*encoder_p));
-        pipeline.run(WORK_UNIT_COUNT);
-        input_thread.join();
-        output_thread.join();
-        
-	output_stream_p->flush();
-        // and close the files.
         if (*input_file != "-") {
-          fs::ifstream *input_file_stream_p = (fs::ifstream*)input_stream_p;
-          fs::ofstream *output_file_stream_p = (fs::ofstream*)output_stream_p;
-          input_file_stream_p->close();
-          output_file_stream_p->close();
-          delete input_file_stream_p;
-          delete output_file_stream_p;
+          // We are working with files
+          if (!fs::exists(input_file_path)) {
+            cerr << *input_file << ": Warning: File not found, skipping."
+                 << endl;
+            continue;
+          }
+          
+          bool fnre_success = fnre_regexp.Replace(fnre_replace, &other_file);
+
+          if (!fnre_success) {
+            cerr << *input_file << ": Warning: Failed to apply regex to find "
+                "partner file, skipping. Possible causes include the regular "
+                "expression failing to match and the replacement string using "
+                "illegal backreferences." << endl;
+            continue;
+          }
         }
+        
+        if ((mode == TRAIN_MODE) || (mode == EVALUATE_MODE)) {
+          
+          if (*input_file == "-") {
+            END_WITH_ERROR("trtok", s_mode << " mode cannot act on "
+                "the standard input alone.");
+          }
+
+          // Check for the annotated file,...
+          fs::path annotated_file_path(other_file);
+          if (!fs::exists(annotated_file_path)) {
+            cerr << other_file << ": Warning: Annotated file does not exist, "
+                "skipping." << endl;
+            continue;
+          }
+
+          // open the files,...
+          fs::ifstream input_stream(input_file_path);
+          fs::ifstream annotated_stream(annotated_file_path);
+
+          // restore the pipes,...
+          /* The sender closes his pipestream to signal an EOF to the receiver.
+             These pipestreams need to reopened for subsequent iterations.
+             All pipestreams must however disconnect from the pipe before
+             we can use it again. */
+          if (!input_pipe_to_p->is_open()) {
+            input_pipe_from_p->close();
+            input_pipe_to_p->open(*input_pipe_p);
+            input_pipe_from_p->open(*input_pipe_p);
+          }
+          if (!annot_pipe_to_p->is_open()) {
+            annot_pipe_from_p->close();
+            annot_pipe_to_p->open(*annot_pipe_p);
+            annot_pipe_from_p->open(*annot_pipe_p);
+          }
+
+          // clean out and setup the pipeline,...
+          input_cleaner_p->setup(&input_stream);
+          rough_tokenizer_p->reset();
+          annot_cleaner_p->setup(&annotated_stream);
+          classifier_p->setup(input_file_path.native(),
+                              annotated_file_path.native());
+
+          // run it...
+          boost::thread input_thread(&TextCleaner::do_work,
+                                     boost::ref(*input_cleaner_p));
+          boost::thread annot_thread(&TextCleaner::do_work,
+                                     boost::ref(*annot_cleaner_p));
+          pipeline.run(WORK_UNIT_COUNT);
+          input_thread.join();
+          annot_thread.join();
+        
+          // and close the files.
+          input_stream.close();
+          annotated_stream.close();
+
+        } else if ((mode == PREPARE_MODE) || (mode == TOKENIZE_MODE)) {
+
+          // Open the files,...
+          fs::path output_file_path(other_file);
+          if (!fs::is_directory(output_file_path.parent_path())) {
+            fs::create_directories(output_file_path.parent_path());
+          }
+
+          istream *input_stream_p = (*input_file == "-") ? &cin
+                                         : new fs::ifstream(input_file_path);
+          ostream *output_stream_p = (*input_file == "-") ? &cout
+                                          : new fs::ofstream(output_file_path);
+
+          // restore the pipes,...
+          if (!input_pipe_to_p->is_open()) {
+            input_pipe_from_p->close();
+            input_pipe_to_p->open(*input_pipe_p);
+            input_pipe_from_p->open(*input_pipe_p);
+          }
+          if (!output_pipe_to_p->is_open()) {
+            output_pipe_from_p->close();
+            output_pipe_to_p->open(*output_pipe_p);
+            output_pipe_from_p->open(*output_pipe_p);
+          }
+
+          // setup the pipeline,...
+          input_cleaner_p->setup(input_stream_p);
+          rough_tokenizer_p->reset();
+          if (simple_preparer_p != NULL) {
+            simple_preparer_p->reset();
+          } else {
+            feature_extractor_p->reset();
+            classifier_p->setup(input_file_path.native());
+          }
+          output_formatter_p->reset();
+          encoder_p->setup(output_stream_p);
+
+          // run it...
+          boost::thread input_thread(&TextCleaner::do_work,
+                                     boost::ref(*input_cleaner_p));
+          boost::thread output_thread(&Encoder::do_work,
+                                      boost::ref(*encoder_p));
+          pipeline.run(WORK_UNIT_COUNT);
+          input_thread.join();
+          output_thread.join();
+          
+          output_stream_p->flush();
+          // and close the files.
+          if (*input_file != "-") {
+            fs::ifstream *input_file_stream_p = (fs::ifstream*)input_stream_p;
+            fs::ofstream *output_file_stream_p = (fs::ofstream*)output_stream_p;
+            input_file_stream_p->close();
+            output_file_stream_p->close();
+            delete input_file_stream_p;
+            delete output_file_stream_p;
+          }
+        }
+      } catch (exception) {
+        cerr << *input_file << ": Error: An exception was thrown during "
+          "the processing of the file.";
       }
     }
 
