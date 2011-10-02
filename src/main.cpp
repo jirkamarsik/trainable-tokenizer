@@ -972,9 +972,9 @@ int main(int argc, char const **argv) {
             delete output_file_stream_p;
           }
         }
-      } catch (exception) {
-        cerr << *input_file << ": Error: An exception was thrown during "
-          "the processing of the file.";
+      } catch (runtime_error) {
+        cerr << *input_file << ": Error: A runtime error occured during the "
+          "processing of the file." << endl;
       }
     }
 
