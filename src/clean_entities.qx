@@ -13,6 +13,10 @@ define {
 }
 
 header {
+#include <iostream>
+#include <sstream>
+#include <iomanip>
+
 #include "configuration.hpp"
 
 #define flush_accumulator_noxml() {\
@@ -93,5 +97,12 @@ mode PREPROCESS {
             flush_accumulator_noxml();
           }
           self_send(QUEX_PREPROC_NOXML_TERMINATION);
+        }
+
+  <<FAIL>>
+        {
+          std::stringstream ss;
+          ss << "Encountered invalid character: 0x" << std::hex << *Lexeme;
+          throw std::runtime_error(ss.str());
         }
 }

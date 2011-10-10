@@ -23,6 +23,10 @@ define {
 }
 
 header {
+#include <iostream>
+#include <sstream>
+#include <iomanip>
+
 #include "configuration.hpp"
 
 #define flush_accumulator_withxml() {\
@@ -113,4 +117,11 @@ mode PREPROCESS {
             }
             self_send(QUEX_PREPROC_WITHXML_TERMINATION);
           }
+
+  <<FAIL>>
+        {
+          std::stringstream ss;
+          ss << "Encountered invalid character: 0x" << std::hex << *Lexeme;
+          throw std::runtime_error(ss.str());
+        }
 }
