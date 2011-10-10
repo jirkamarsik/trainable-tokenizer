@@ -23,9 +23,7 @@ define {
 }
 
 header {
-#include <iostream>
-#include <sstream>
-#include <iomanip>
+#include <cstdio>
 
 #include "configuration.hpp"
 
@@ -120,8 +118,7 @@ mode PREPROCESS {
 
   <<FAIL>>
         {
-          std::stringstream ss;
-          ss << "Encountered invalid character: 0x" << std::hex << *Lexeme;
-          throw std::runtime_error(ss.str());
+          fprintf(stderr, "Warning: Encountered invalid character: 0x%x\n", *Lexeme);
+          self.seek_forward(1);
         }
 }
