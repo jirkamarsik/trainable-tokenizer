@@ -363,7 +363,7 @@ void Classifier::align_chunk_with_solution(chunk_t *in_chunk_p) {
                 (token + 1)->text +
                   (token->n_newlines >= 1 ? "(preceded by a line break)" : "")
                 : "",
-              "Consider adding more sentence terminators or starters.");
+              "Consider adding a tokenization rule to a *.break file.");
       } else {
         if (token->n_newlines >= 0)
           if (token->decision_flags & MAY_JOIN_FLAG)
