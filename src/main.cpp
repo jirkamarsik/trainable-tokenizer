@@ -42,6 +42,10 @@ namespace fs = boost::filesystem;
   return 1;\
 }
 
+#define SIGNAL_WARNING(location, message) {\
+  cerr << location << ": Warning: " << message << endl;\
+}
+
 // A 2D-array accessor for the feature selection mask
 #define FEATURES_MASK(offset, property)\
   features_mask[(offset) * n_properties + (property)]
@@ -580,10 +584,10 @@ int main(int argc, char const **argv) {
       fs::path file_path(*file);
 
       if (!fs::exists(file_path) && (file_path != "-")) {
-        END_WITH_ERROR(*file, "File not found.");
+        SIGNAL_WARNING(*file, "File not found.");
+      } else {
+        input_files.push_back(*file);
       }
-
-      input_files.push_back(*file);
     }
 
     // If we were given any explicit file list, we include all the files
@@ -594,10 +598,10 @@ int main(int argc, char const **argv) {
       fs::path file_list_path(*file_list);
 
       if (!fs::exists(file_list_path) && (file_list_path != "-")) {
-        END_WITH_ERROR(*file_list, "File not found.");
+        SIGNAL_WARNING(*file_list, "File not found.");
+      } else {
+        include_listed_files(file_list_path, input_files);
       }
-
-      include_listed_files(file_list_path, input_files);
     }
 
     // If no files or file lists were given explicitly, we check for
@@ -640,10 +644,10 @@ int main(int argc, char const **argv) {
         fs::path file_list_path(*file_list);
 
         if (!fs::exists(file_list_path) && (file_list_path != "-")) {
-          END_WITH_ERROR(*file_list, "File not found.");
+          SIGNAL_WARNING(*file_list, "File not found.");
+        } else {
+          include_listed_files(file_list_path, input_files);
         }
-
-        include_listed_files(file_list_path, input_files);
       }
 
       // ... and if there were none, we add the default heldout.fl.
