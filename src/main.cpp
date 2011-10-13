@@ -299,7 +299,7 @@ int main(int argc, char const **argv) {
      * If case folding is implented in the future, it might be feasible to
      * make the extensions completely case-insensitive. */
     vector<fs::path> split_files, join_files, break_files,
-                     listp_files, rep_files;
+                     listp_files, rep_files, other_files;
     fs::path features_file, maxentparams_file;
     fs::path default_file_list, default_heldout_file_list, default_fnre_file;
     boost::unordered_map< string, vector<fs::path>* > file_vectors;
@@ -334,6 +334,8 @@ int main(int argc, char const **argv) {
           features_file = *file;
       } else if (file->filename() == "maxent.params")  {
           maxentparams_file = *file;
+      } else {
+          other_files.push_back(*file);
       }
       last_filename = file->filename().string();
     }
@@ -497,81 +499,6 @@ int main(int argc, char const **argv) {
       return read_features_exit_code;
     }
 
-    // DETERMINING THE INPUT FILES
-
-    vector<string> input_files;
-
-    // The files explicitly stated on the command line are to be processed
-    // everytime. If a file named '-' was given, the standard input/output
-    // combo is used.
-    for (vector<string>::const_iterator file = sv_input_files.begin();
-         file != sv_input_files.end(); file++) {
-
-      fs::path file_path(*file);
-
-      if (!fs::exists(file_path) && (file_path != "-")) {
-        END_WITH_ERROR(*file, "File not found.");
-      }
-
-      input_files.push_back(*file);
-    }
-
-    // If we were given any explicit file list, we include all the files
-    // referred inside it.
-    for (vector<string>::const_iterator file_list = sv_file_lists.begin();
-         file_list != sv_file_lists.end(); file_list++) {
-
-      fs::path file_list_path(*file_list);
-
-      if (!fs::exists(file_list_path) && (file_list_path != "-")) {
-        END_WITH_ERROR(*file_list, "File not found.");
-      }
-
-      include_listed_files(file_list_path, input_files);
-    }
-
-    // If no files or file lists were given explicitly, we check for
-    // a .fl file with a default file list.
-    if ((input_files.size() == 0) && !default_file_list.empty()) {
-      include_listed_files(default_file_list, input_files);
-    }
-
-    // If no input files or file lists were given or set up as default
-    // by the user, then we process standard input.
-    if (input_files.size() == 0) {
-      input_files.push_back("-");
-    }
-
-
-    // This marks what part of the input_files is composed of regular
-    // input files (i.e. not-heldout files).
-    int num_nonheldout_files = input_files.size();
-
-    // If we are in 'train' mode, we also add the heldout files after
-    // the regular input files.
-    if (mode == TRAIN_MODE) {
-
-      // We first check for any explicit heldout file lists...
-      for (vector<string>::const_iterator file_list = sv_heldout_file_lists.begin();
-           file_list != sv_heldout_file_lists.end(); file_list++) {
-
-        fs::path file_list_path(*file_list);
-
-        if (!fs::exists(file_list_path) && (file_list_path != "-")) {
-          END_WITH_ERROR(*file_list, "File not found.");
-        }
-
-        include_listed_files(file_list_path, input_files);
-      }
-
-      // ... and if there were none, we add the default heldout.fl.
-      if ((input_files.size() == num_nonheldout_files)
-          && !default_heldout_file_list.empty()) {
-        include_listed_files(default_heldout_file_list, input_files);
-      }
-    }
-
-
 
     // PARSING THE FILENAME REGEXP/REPLACEMENT STRING
     
@@ -637,6 +564,93 @@ int main(int argc, char const **argv) {
           (vm["filename-regexp"].defaulted() ? default_fnre_file : "trtok"),
           "The following error occured when compiling the regular expression: "
           << fnre_regexp.error());
+    }
+
+
+    // DETERMINING THE INPUT FILES
+
+    vector<string> input_files;
+
+    // The files explicitly stated on the command line are to be processed
+    // everytime. If a file named '-' was given, the standard input/output
+    // combo is used.
+    for (vector<string>::const_iterator file = sv_input_files.begin();
+         file != sv_input_files.end(); file++) {
+
+      fs::path file_path(*file);
+
+      if (!fs::exists(file_path) && (file_path != "-")) {
+        END_WITH_ERROR(*file, "File not found.");
+      }
+
+      input_files.push_back(*file);
+    }
+
+    // If we were given any explicit file list, we include all the files
+    // referred inside it.
+    for (vector<string>::const_iterator file_list = sv_file_lists.begin();
+         file_list != sv_file_lists.end(); file_list++) {
+
+      fs::path file_list_path(*file_list);
+
+      if (!fs::exists(file_list_path) && (file_list_path != "-")) {
+        END_WITH_ERROR(*file_list, "File not found.");
+      }
+
+      include_listed_files(file_list_path, input_files);
+    }
+
+    // If no files or file lists were given explicitly, we check for
+    // a .fl file with a default file list. In the case of train mode,
+    // we also look for training files in the scheme folders.
+    if ((input_files.size() == 0)) {
+      if (!default_file_list.empty()) {
+        include_listed_files(default_file_list, input_files);
+      }
+      if (mode == TRAIN_MODE) {
+        // We look for all the files matching the filename replacement regular
+        // expression and add them as further training data.
+        for (vector<fs::path>::const_iterator file = other_files.begin();
+             file != other_files.end(); file++) {
+          if (fnre_regexp.PartialMatch(file->string()))
+            input_files.push_back(file->string());
+        }
+      }
+    }
+
+    // If no input files or file lists were given or set up as default
+    // by the user, then we process standard input.
+    if (input_files.size() == 0) {
+      input_files.push_back("-");
+    }
+
+
+    // This marks what part of the input_files is composed of regular
+    // input files (i.e. not-heldout files).
+    int num_nonheldout_files = input_files.size();
+
+    // If we are in 'train' mode, we also add the heldout files after
+    // the regular input files.
+    if (mode == TRAIN_MODE) {
+
+      // We first check for any explicit heldout file lists...
+      for (vector<string>::const_iterator file_list = sv_heldout_file_lists.begin();
+           file_list != sv_heldout_file_lists.end(); file_list++) {
+
+        fs::path file_list_path(*file_list);
+
+        if (!fs::exists(file_list_path) && (file_list_path != "-")) {
+          END_WITH_ERROR(*file_list, "File not found.");
+        }
+
+        include_listed_files(file_list_path, input_files);
+      }
+
+      // ... and if there were none, we add the default heldout.fl.
+      if ((input_files.size() == num_nonheldout_files)
+          && !default_heldout_file_list.empty()) {
+        include_listed_files(default_heldout_file_list, input_files);
+      }
     }
     
 
