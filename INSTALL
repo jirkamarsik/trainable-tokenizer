@@ -13,12 +13,10 @@ You will need
   Debian packages: python3 or python
 
 * Maxent Modeling Toolkit for Python and C++ (Le Zhang)
-  I recommend the version at github.com/jirkamarsik/maxent which fixes some
-  critical overflow bugs. I also recommend that you have a Fortran compiler
-  installed so that the L-BFGS procedure is also compiled. The zlib libraries
-  and headers will also allow you to save the trained model in a compressed
-  binary format (not required). The original release can be found at
-  http://homepages.inf.ed.ac.uk/lzhang10/maxent_toolkit.html.
+  I recommend that you have a Fortran compiler installed so that the L-BFGS
+  procedure is also compiled. The zlib libraries and headers will also allow
+  you to save the trained model in a compressed binary format (not required).
+  The project is hosted at https://github.com/lzhang10/maxent
   Debian packages: gfortran (for the Fortran compiler), zlib1g, zlib1g-dev (for
                    the optional zlib support)
 
