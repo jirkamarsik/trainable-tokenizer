@@ -55,12 +55,12 @@ endif (USE_ICONV)
 
 add_custom_command (OUTPUT RoughLexer RoughLexer.cpp RoughLexer-token
                            RoughLexer-configuration RoughLexer-token_ids
-            COMMAND ${QUEX} --mode-files        RoughLexer.qx
-                            --engine            RoughLexer
-                            --buffer-element-size    4
-                            --token-prefix        QUEX_ROUGH_
+            COMMAND ${QUEX} --mode-files          RoughLexer.qx
+                            --engine              RoughLexer
+                            --buffer-element-size 4
+                            --token-id-prefix     QUEX_ROUGH_
                             ${QUEX_CONVERTER}
-                            --token-id-offset    @QUEX_TOKEN_ID_OFFSET@
+                            --token-id-offset     @QUEX_TOKEN_ID_OFFSET@
             DEPENDS RoughLexer.qx VERBATIM
             COMMENT "Building RoughLexer with quex")
 

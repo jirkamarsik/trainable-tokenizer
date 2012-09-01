@@ -14,7 +14,19 @@ namespace trtok {
 
 inline string unicode_to_utf8(basic_string<uint32_t> const &str)
 {
-    return clean_entities::EntityCleaner_unicode_to_char(str);
+    /* Since a recent version, Quex has started to return the
+       converted strings as basic_string<uint8_t>, so I have
+       to cast it to strig (basic_string<char>) which I expect
+       in my program. */
+    basic_string<uint8_t> from_quex = clean_entities::unicode_to_utf8(str);
+    string to_return = string();
+
+    typedef basic_string<uint8_t>::const_iterator it_type;
+    for (it_type it = from_quex.begin(); it != from_quex.end(); it++) {
+      to_return.push_back((char)*it);
+    }
+
+    return to_return;
 }
 
 inline bool is_whitespace(uint32_t c) {

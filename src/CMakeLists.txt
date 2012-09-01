@@ -174,7 +174,7 @@ add_custom_command (OUTPUT ${QUEX_ENTITY} ${QUEX_ENTITY}.cpp
     COMMAND ${QUEX} --mode-files   ${CMAKE_CURRENT_SOURCE_DIR}/clean_entities.qx
                     --engine                trtok::clean_entities::EntityCleaner
                     --buffer-element-size                                      4
-                    --token-prefix                           QUEX_PREPROC_NOXML_
+                    --token-id-prefix                        QUEX_PREPROC_NOXML_
                     --odir                ${CMAKE_CURRENT_BINARY_DIR}/quex_files
                     ${QUEX_CONVERTER}
     DEPENDS clean_entities.qx VERBATIM
@@ -186,7 +186,7 @@ add_custom_command (OUTPUT ${QUEX_XML} ${QUEX_XML}.cpp ${QUEX_XML}-token
     COMMAND ${QUEX} --mode-files        ${CMAKE_CURRENT_SOURCE_DIR}/clean_xml.qx
                     --engine                        trtok::clean_xml::XmlCleaner
                     --buffer-element-size                                      4
-                    --token-prefix                         QUEX_PREPROC_WITHXML_
+                    --token-id-prefix                      QUEX_PREPROC_WITHXML_
                     --odir                ${CMAKE_CURRENT_BINARY_DIR}/quex_files
                     ${QUEX_CONVERTER}
     DEPENDS clean_xml.qx VERBATIM
@@ -200,7 +200,7 @@ add_custom_command (OUTPUT ${QUEX_FEATURES} ${QUEX_FEATURES}.cpp
     COMMAND ${QUEX} --mode-files    ${CMAKE_CURRENT_SOURCE_DIR}/read_features.qx
                     --engine                trtok::read_features::FeaturesReader
                     --buffer-element-size                                      4
-                    --token-prefix                                QUEX_FEATURES_
+                    --token-id-prefix                             QUEX_FEATURES_
                     --odir                ${CMAKE_CURRENT_BINARY_DIR}/quex_files
                     ${QUEX_CONVERTER}
     DEPENDS read_features.qx VERBATIM
