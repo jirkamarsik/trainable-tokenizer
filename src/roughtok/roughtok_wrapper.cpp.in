@@ -73,7 +73,21 @@ public:
         }
 
         if (out_token.type_id == TOKEN_PIECE_ID) {
-            out_token.text = quex::RoughLexer_unicode_to_char(m_token_p->get_text());
+          /* We convert the string from Unicode code points to UTF-8
+            using Quex, but since Quex started returning
+            basic_string<uint8_t> instead of string
+            (basic_string<char>), we have to "cast" the returned
+            string to fit our type customs. */
+            std::basic_string<uint8_t> from_quex =
+                quex::unicode_to_utf8(m_token_p->get_text());
+            std::string to_store = std::string();
+
+            typedef std::basic_string<uint8_t>::const_iterator it_type;
+            for (it_type it = from_quex.begin(); it != from_quex.end(); it++) {
+                to_store.push_back((char)*it);
+            }
+
+            out_token.text = to_store;
         }
         else if (out_token.type_id == WHITESPACE_ID) {
             out_token.n_newlines = m_token_p->n_newlines;
