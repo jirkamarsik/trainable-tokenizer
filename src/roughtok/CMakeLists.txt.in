@@ -61,6 +61,7 @@ add_custom_command (OUTPUT RoughLexer RoughLexer.cpp RoughLexer-token
                             --token-id-prefix     QUEX_ROUGH_
                             ${QUEX_CONVERTER}
                             --token-id-offset     @QUEX_TOKEN_ID_OFFSET@
+                            --no-error-on-dominated-pattern
             DEPENDS RoughLexer.qx VERBATIM
             COMMENT "Building RoughLexer with quex")
 
