@@ -1,0 +1,6 @@
+# numbers could be joined
+[:digit:]+              [:space:]+[:digit:]+
+
+# possibly join decimal numbers (before and after the decimal point)
+[:digit:]+              [:space:]+[.,][:space:]*[:digit:]+
+[:digit:][:space:]*[.,] [:space:]+[:digit:]+

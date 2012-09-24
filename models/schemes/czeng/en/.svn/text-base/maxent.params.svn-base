@@ -1,0 +1,4 @@
+save_as_binary=true
+n_iterations=1000
+convergence_tolerance=4e-7
+event_cutoff=1

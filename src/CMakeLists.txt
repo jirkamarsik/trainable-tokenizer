@@ -234,8 +234,8 @@ target_link_libraries (trtok ${LIBS})
 
 install (TARGETS trtok DESTINATION ${INSTALL_DIR})
 install (PROGRAMS python/analyze.py DESTINATION ${INSTALL_DIR} RENAME analyze)
-install (DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/code/
-         DESTINATION ${INSTALL_DIR}/code)
-install (DIRECTORY DESTINATION ${INSTALL_DIR}/schemes)
-install (DIRECTORY DESTINATION ${INSTALL_DIR}/build)
+install (DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/code
+         DESTINATION ${INSTALL_DIR})
+install (DIRECTORY ../models/schemes DESTINATION ${INSTALL_DIR})
+install (DIRECTORY ../models/build DESTINATION ${INSTALL_DIR})
 install (CODE "message (\"Don't forget to set the environment variable TRTOK_PATH=${INSTALL_DIR}.\")")

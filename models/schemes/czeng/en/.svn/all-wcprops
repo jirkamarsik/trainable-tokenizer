@@ -1,0 +1,119 @@
+K 25
+svn:wc:ra_dav:version-url
+V 67
+/svn/czeng/!svn/ver/855/trunk/czeng10/mining/tools/trtok/schemes/en
+END
+prefixes.listp
+K 25
+svn:wc:ra_dav:version-url
+V 82
+/svn/czeng/!svn/ver/644/trunk/czeng10/mining/tools/trtok/schemes/en/prefixes.listp
+END
+us.listp
+K 25
+svn:wc:ra_dav:version-url
+V 76
+/svn/czeng/!svn/ver/644/trunk/czeng10/mining/tools/trtok/schemes/en/us.listp
+END
+abbrev_mess.listp
+K 25
+svn:wc:ra_dav:version-url
+V 85
+/svn/czeng/!svn/ver/644/trunk/czeng10/mining/tools/trtok/schemes/en/abbrev_mess.listp
+END
+ampm.listp
+K 25
+svn:wc:ra_dav:version-url
+V 78
+/svn/czeng/!svn/ver/644/trunk/czeng10/mining/tools/trtok/schemes/en/ampm.listp
+END
+no_sent_end.listp
+K 25
+svn:wc:ra_dav:version-url
+V 85
+/svn/czeng/!svn/ver/644/trunk/czeng10/mining/tools/trtok/schemes/en/no_sent_end.listp
+END
+suffixes.listp
+K 25
+svn:wc:ra_dav:version-url
+V 82
+/svn/czeng/!svn/ver/644/trunk/czeng10/mining/tools/trtok/schemes/en/suffixes.listp
+END
+abbrev.listp
+K 25
+svn:wc:ra_dav:version-url
+V 80
+/svn/czeng/!svn/ver/644/trunk/czeng10/mining/tools/trtok/schemes/en/abbrev.listp
+END
+semistop.listp
+K 25
+svn:wc:ra_dav:version-url
+V 82
+/svn/czeng/!svn/ver/644/trunk/czeng10/mining/tools/trtok/schemes/en/semistop.listp
+END
+titles.listp
+K 25
+svn:wc:ra_dav:version-url
+V 80
+/svn/czeng/!svn/ver/644/trunk/czeng10/mining/tools/trtok/schemes/en/titles.listp
+END
+quo.listp
+K 25
+svn:wc:ra_dav:version-url
+V 77
+/svn/czeng/!svn/ver/644/trunk/czeng10/mining/tools/trtok/schemes/en/quo.listp
+END
+dont.listp
+K 25
+svn:wc:ra_dav:version-url
+V 78
+/svn/czeng/!svn/ver/644/trunk/czeng10/mining/tools/trtok/schemes/en/dont.listp
+END
+month_days.listp
+K 25
+svn:wc:ra_dav:version-url
+V 84
+/svn/czeng/!svn/ver/644/trunk/czeng10/mining/tools/trtok/schemes/en/month_days.listp
+END
+months.listp
+K 25
+svn:wc:ra_dav:version-url
+V 80
+/svn/czeng/!svn/ver/644/trunk/czeng10/mining/tools/trtok/schemes/en/months.listp
+END
+fullstop.listp
+K 25
+svn:wc:ra_dav:version-url
+V 82
+/svn/czeng/!svn/ver/644/trunk/czeng10/mining/tools/trtok/schemes/en/fullstop.listp
+END
+bullets.listp
+K 25
+svn:wc:ra_dav:version-url
+V 81
+/svn/czeng/!svn/ver/644/trunk/czeng10/mining/tools/trtok/schemes/en/bullets.listp
+END
+initials.listp
+K 25
+svn:wc:ra_dav:version-url
+V 82
+/svn/czeng/!svn/ver/644/trunk/czeng10/mining/tools/trtok/schemes/en/initials.listp
+END
+train.fl
+K 25
+svn:wc:ra_dav:version-url
+V 76
+/svn/czeng/!svn/ver/855/trunk/czeng10/mining/tools/trtok/schemes/en/train.fl
+END
+maxent.params
+K 25
+svn:wc:ra_dav:version-url
+V 81
+/svn/czeng/!svn/ver/664/trunk/czeng10/mining/tools/trtok/schemes/en/maxent.params
+END
+features
+K 25
+svn:wc:ra_dav:version-url
+V 76
+/svn/czeng/!svn/ver/644/trunk/czeng10/mining/tools/trtok/schemes/en/features
+END

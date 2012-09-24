@@ -1,0 +1,10 @@
+# We separate the punctuation and symbol characters from any other nonblanks.
+[:union(\G{Punctuation},\G{Symbol}):] [:inverse(\P{White_Space}):]
+[:inverse(\P{White_Space}):] [:union(\G{Punctuation},\G{Symbol}):]
+
+# We also separate the letters from numbers.
+\G{Letter} \G{Number}
+\G{Number} \G{Letter}
+
+# This gives us rough tokens consisting of the runs of letters and numbers
+# and individual other characters found in the input.
