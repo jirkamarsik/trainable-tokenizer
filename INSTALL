@@ -5,12 +5,12 @@ You will need
   Needed to build and install the project. Either the curses interface 'ccmake'
   or the Qt version is also recommended for easier configuration. A build
   system for which a CMake generator exists (e.g. make) and the compiler tools
-  for C++ are of course a necessity as well (tested on gcc 4.5.3).
+  for C++ are of course a necessity as well (tested on gcc 4.5.3, 4.7.2).
   Debian packages: g++, make, cmake, cmake-curses-gui
 
 * Python
   Needed to run the analyze script.
-  Debian packages: python3 or python
+  Debian packages: python
 
 * Maxent Modeling Toolkit for Python and C++ (Le Zhang)
   I recommend that you have a Fortran compiler installed so that the L-BFGS
@@ -31,11 +31,11 @@ You will need
   rt.
   Debian packages: libgfortran3 (installed as a dependency of gfortran)
 
-* Quex (version 0.63.2)
+* Quex (version 0.63.1)
   The lexical analyzer generator used during both compile time and runtime.
   Quex can change during its development. This release was tested with Quex
-  version 0.63.2. You might try a newer version if one exists and if it doesn't
-  work, then you can use either 0.63.2 or update TrTok.
+  version 0.63.1. If you use other versions of Quex, you're gonna have a bad
+  time.
   See the official releases at http://quex.org.
 
 * libtool dynamic loading library (with headers)
@@ -51,10 +51,7 @@ You will need
   The following compiled libraries are needed: system, filesystem,
   program_options, thread. A lot more headers-only libraries are required so I
   recommend installing the whole lot.
-  Debian packages: libboost1.46-all-dev (found in Debian Wheezy and later,
-                   also known as libboost-all-dev; if having trouble
-                   installing from packages, try the upstream source
-                   distribution)
+  Debian packages: libboost-all-dev 
 
 * Threading Building Blocks (with headers)
   This library allows us to harness multiple threads with great ease. It should
