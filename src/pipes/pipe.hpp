@@ -238,7 +238,7 @@ class basic_pipestreambuf : public std::basic_streambuf<Ch,Tr>
         m_pblock->next = allocate();
         m_pblock = m_pblock->next;
         this->setp(m_pblock->begin(), m_pblock->end());
-        sputc(Tr::to_char_type(ch));
+        this->sputc(Tr::to_char_type(ch));
         m_cond.notify_one(); // notify about ch
         invariants(); // after overflow
         return ch;
