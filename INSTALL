@@ -121,6 +121,11 @@ size of work units being passed through the pipeline).
 After setting the parameters, press 'c' and then 'g' to configure the cache and
 generate the Makefiles (or other files for your build system of choice).
 
+An alternative to setting the CMake parameters interactively using ccmake is
+to use the -D option of cmake, e.g.:
+
+  cmake -DCMAKE_BUILD_TYPE=Release
+
 Now you can use make or whatever build system you use to compile and install
 the application. For example with make you could type
 
