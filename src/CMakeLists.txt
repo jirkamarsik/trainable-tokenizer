@@ -225,8 +225,16 @@ add_executable (trtok ${SRCS})
 # Debian or Fedora no longer automatically links libraries for unresolved
 # symbols in linked libraries. These platform-specific libraries must
 # therefore be linked manually.
+
+# However, not everybody has Fortran, so we should make its inclusion
+# conditional (possibility to opt-out).
+set (LINK_GFORTRAN_ON_UNIX "YES" CACHE BOOL
+     "Should libgfortran be linked in a UNIX environment? Due to changes in GNU/Linux linker behavior, several libraries are given to the linker explicitly, including libgfortran. If you did not build your Maxent Toolkit with Fortran and do not have libgfortran on your system, you will want to set this option to NO.")
 if (UNIX)
-  set (LIBS ${LIBS} pthread rt gfortran)
+  set (LIBS ${LIBS} pthread rt)
+  if (LINK_GFORTRAN_ON_UNIX)
+    set (LIBS ${LIBS} gfortran)
+  endif (LINK_GFORTRAN_ON_UNIX)
 endif (UNIX)
 
 target_link_libraries (trtok ${LIBS})
