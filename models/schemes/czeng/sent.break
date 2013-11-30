@@ -1,2 +1,4 @@
-.|\n                            [|]
+# A list of characters after which a MAY_BREAK_SENTENCE should be inserted (.|\n matches any context).
 [).?!:;´`'‘’"“”„«»‚।>…]         .|\n
+# A list of characters before which a MAY_BREAK_SENTENCE should be inserted (here it's just the pipe).
+.|\n                            [|]
