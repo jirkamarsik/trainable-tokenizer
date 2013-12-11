@@ -1,4 +1,33 @@
-# A list of characters after which a MAY_BREAK_SENTENCE should be inserted (.|\n matches any context).
-[).?!:;´`'‘’"“”„«»‚।>…]         .|\n
-# A list of characters before which a MAY_BREAK_SENTENCE should be inserted (here it's just the pipe).
-.|\n                            [|]
+# A list of characters after which a MAY_BREAK_SENTENCE should be inserted
+# (.|\n matches any context).
+[).?!:;`'">]         .|\n
+
+# Take care that Unicode characters should not be included directly, but they
+# should use instead the \UXXXXXX notation of Quex
+# (http://quex.sourceforge.net/doc/html/usage/patterns/context-free.html).
+# « (LEFT-POINTING DOUBLE ANGLE QUOTATION MARK)
+\U00AB               .|\n
+# ´ (ACUTE ACCENT)
+\U00B4               .|\n
+# » (RIGHT-POINTING DOUBLE ANGLE QUOTATION MARK)
+\U00BB               .|\n
+# । (DEVANAGARI DANDA)
+\U0964               .|\n
+# ‘ (LEFT SINGLE QUOTATION MARK)
+\U2018               .|\n
+# ’ (RIGHT SINGLE QUOTATION MARK)
+\U2019               .|\n
+# ‚ (SINGLE LOW-9 QUOTATION MARK)
+\U201A               .|\n
+# “ (LEFT DOUBLE QUOTATION MARK)
+\U201C               .|\n
+# ” (RIGHT DOUBLE QUOTATION MARK)
+\U201D               .|\n
+# „ (DOUBLE LOW-9 QUOTATION MARK)
+\U201E               .|\n
+# … (HORIZONTAL ELLIPSIS)
+\U2026               .|\n
+
+# A list of characters before which a MAY_BREAK_SENTENCE should be inserted
+# (here it is just the pipe).
+.|\n                 [|]

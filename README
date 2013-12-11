@@ -48,7 +48,10 @@ his own features and specify which features are significant for what tokens.
 
     The grammar of the regular expressions in these files is the one used by
     Quex and described in detail at
-    http://quex.sourceforge.net/doc/html/usage/patterns/context-free.html.
+    http://quex.sourceforge.net/doc/html/usage/patterns/context-free.html. Particularly
+    take care since Quex does not handle Unicode characters directly in its
+    regular expression syntax, so be sure to use the \UXXXXXX escape notation
+    if you need to make use of them.
 
     The files may contain comments which are lines that begin with the # symbol.
 
