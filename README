@@ -168,6 +168,9 @@ his own features and specify which features are significant for what tokens.
       Example:
 
         trtok train en/simple/brown -l data/brown/train.fl -r "|raw|txt|"
+        
+    In the annotated/tokenized files, sentences are split by newlines and
+    tokens are split by spaces.
 
     If no input file or file lists were given, a default file list named
     <mode_name>.fl, which is part of the tokenization scheme, is used. If no
